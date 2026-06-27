@@ -54,11 +54,11 @@ npm run validate:env -- /path/to/applied-store
 - `npm run handoff:deployment -- --site-root /path/to/applied-store`: 통과
   - 문서: `dist/deployment-handoff.md`
   - JSON: `dist/deployment-handoff.json`
-  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
+  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
 - `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 누락으로 예상대로 미생성
   - 출력: `ok=false`
   - 파일 쓰기 없음
-  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
+  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
 - `npm run audit:completion -- --site-root /path/to/applied-store`: 완료 감사 리포트 생성
   - 문서: `dist/completion-audit.md`
   - JSON: `dist/completion-audit.json`
@@ -67,7 +67,7 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 누락으로 `ok=false`
-- `npm test`: 62개 테스트 통과
+- `npm test`: 64개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
@@ -203,9 +203,21 @@ npm run stop:local
 
 필요한 입력:
 
-- 자사몰 코드 경로 또는 저장소
 - GTM 컨테이너 ID
 - GA4 측정 ID
-- Google Ads 전환 ID/라벨
+- Google Ads 구매 전환 라벨
 - Meta Pixel ID
 - CRM/카카오/이메일 발송툴 webhook URL과 API 키
+
+## 이 컴퓨터에서 확인한 외부 계정 상태
+
+확인일: 2026-06-27
+
+- Google 계정: `leecg2908@gmail.com`
+- GTM: 계정 생성 폼이 `oliveyoung-shopee`, 국가 `대한민국`, 웹 컨테이너 `oliveyoung-shopee-web`로 준비되어 있으나, 최종 `만들기` 버튼은 누르지 않았습니다.
+- GA4: Analytics가 초기 `측정 시작` 화면에 있어 GA4 속성/웹 스트림/측정 ID가 아직 없습니다.
+- Google Ads: 계정 `446-442-5600`을 확인했고, 로컬 후보 사이트 env에 `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600`를 반영했습니다. 구매 전환 액션 라벨은 아직 없습니다.
+- Meta: Business Settings > Data Sources > Data sets and pixels에서 기존 데이터 세트/픽셀이 없습니다.
+- 운영 도메인: 후보 사이트 저장소와 배포 설정에서 운영 URL을 찾지 못했습니다. 후보 사이트 `.env.local`의 `NEXT_PUBLIC_APP_URL`은 localhost입니다.
+
+외부 계정 리소스 생성, 전환 액션 생성, 픽셀 생성, GTM 게시, 광고 설정 진행은 실제 계정 상태를 바꾸므로 실행 직전 사용자 확인과 운영 도메인이 필요합니다.
