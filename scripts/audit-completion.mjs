@@ -2,6 +2,8 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { validateDeploymentEnv } from './validate-deployment-env.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_FULL_QA_REPORT = path.join(KIT_ROOT, 'dist', 'full-qa-report.json');
@@ -114,8 +116,8 @@ function summarizeRequirements(requirements) {
   };
 }
 
-function missingInputs(handoff, fullQa) {
-  const source = handoff?.env?.summary || stepById(fullQa, 'site_env')?.json?.summary || {};
+function missingInputs(currentEnv, fullQa, handoff) {
+  const source = currentEnv?.summary || stepById(fullQa, 'site_env')?.json?.summary || handoff?.env?.summary || {};
   return {
     missing: source.missing || [],
     placeholders: source.placeholders || [],
@@ -123,7 +125,7 @@ function missingInputs(handoff, fullQa) {
   };
 }
 
-function buildRequirements(fullQa, handoff) {
+function buildRequirements(fullQa, handoff, currentEnv) {
   const gtmVerify = stepById(fullQa, 'gtm_import_verify');
   const browserDemo = stepById(fullQa, 'browser_demo_e2e');
   const localE2e = stepById(fullQa, 'local_e2e');
@@ -132,9 +134,10 @@ function buildRequirements(fullQa, handoff) {
   const siteEnv = stepById(fullQa, 'site_env');
   const gtmRender = stepById(fullQa, 'gtm_import_render');
   const revenue = stepById(fullQa, 'revenue_reconciliation');
-  const envReady = handoff?.env?.ready === true || siteEnv?.json?.ready === true;
+  const envReady = currentEnv?.ready === true;
   const gtmReady = gtmRender?.status === 'passed' && gtmRender?.json?.ok === true;
   const fullQaExists = Boolean(fullQa);
+  const inputSummary = missingInputs(currentEnv, fullQa, handoff);
 
   return [
     requirement(
@@ -238,9 +241,9 @@ function buildRequirements(fullQa, handoff) {
       [
         `site_env=${siteEnv?.status || 'missing'}`,
         `env_ready=${envReady}`,
-        `missing=${missingInputs(handoff, fullQa).missing.join(', ') || 'none'}`,
-        `placeholders=${missingInputs(handoff, fullQa).placeholders.join(', ') || 'none'}`,
-        `invalid=${missingInputs(handoff, fullQa).invalid.join(', ') || 'none'}`
+        `missing=${inputSummary.missing.join(', ') || 'none'}`,
+        `placeholders=${inputSummary.placeholders.join(', ') || 'none'}`,
+        `invalid=${inputSummary.invalid.join(', ') || 'none'}`
       ],
       '누락된 운영 env 값을 실제 값으로 채운 뒤 validate:env와 full:qa --require-env-ready를 실행합니다.'
     ),
@@ -312,9 +315,10 @@ async function auditCompletion(options = {}) {
   const fullQa = await readJsonIfExists(fullQaReport);
   const handoff = await readJsonIfExists(handoffReport);
   const siteRoot = path.resolve(options.siteRoot || handoff?.site_root || stepById(fullQa, 'site_audit')?.json?.root || process.cwd());
-  const requirements = buildRequirements(fullQa, handoff);
+  const currentEnv = await validateDeploymentEnv(siteRoot);
+  const requirements = buildRequirements(fullQa, handoff, currentEnv);
   const summary = summarizeRequirements(requirements);
-  const blocking = missingInputs(handoff, fullQa);
+  const blocking = missingInputs(currentEnv, fullQa, handoff);
   const blockingInputs = [...blocking.missing, ...blocking.placeholders, ...blocking.invalid];
   const completionReady = requirements.every((item) => item.status === 'complete');
 
@@ -331,6 +335,11 @@ async function auditCompletion(options = {}) {
       deployment_handoff: {
         file: handoffReport,
         exists: await pathExists(handoffReport)
+      },
+      current_env: {
+        root: currentEnv.root,
+        loaded_env_files: currentEnv.loaded_env_files,
+        ready: currentEnv.ready
       }
     },
     blocking_inputs: blockingInputs,

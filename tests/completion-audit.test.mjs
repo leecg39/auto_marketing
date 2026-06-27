@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -122,6 +122,21 @@ function handoff({ ready = false } = {}) {
   };
 }
 
+const READY_ENV = [
+  'NEXT_PUBLIC_GTM_ID=GTM-ABCDE12',
+  'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+  'DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/webhook',
+  'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCDE12345',
+  'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+  'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=Purchase_Label_123',
+  'NEXT_PUBLIC_META_PIXEL_ID=123456789012'
+].join('\n');
+
+async function writeSiteEnv(siteRoot, lines) {
+  await mkdir(siteRoot, { recursive: true });
+  await writeFile(path.join(siteRoot, '.env.local'), `${lines.join('\n')}\n`);
+}
+
 test('parses completion audit arguments', () => {
   const parsed = parseArgs([
     '--site-root',
@@ -141,15 +156,17 @@ test('parses completion audit arguments', () => {
 
 test('completion audit marks missing operating values as external blockers', async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-'));
+  const siteRoot = path.join(tmp, 'store');
   const fullQaReport = path.join(tmp, 'full-qa.json');
   const handoffReport = path.join(tmp, 'handoff.json');
 
   try {
+    await writeSiteEnv(siteRoot, READY_ENV.split('\n').filter((line) => !line.startsWith('NEXT_PUBLIC_GTM_ID=')));
     await writeFile(fullQaReport, JSON.stringify(baseFullQa()));
     await writeFile(handoffReport, JSON.stringify(handoff()));
 
     const report = await auditCompletion({
-      siteRoot: '/tmp/store',
+      siteRoot,
       fullQaReport,
       handoffReport
     });
@@ -164,17 +181,57 @@ test('completion audit marks missing operating values as external blockers', asy
   }
 });
 
-test('completion audit reports ready when all requirement evidence is complete', async () => {
-  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-ready-'));
+test('completion audit uses current site env before stale handoff inputs', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-current-env-'));
+  const siteRoot = path.join(tmp, 'store');
   const fullQaReport = path.join(tmp, 'full-qa.json');
   const handoffReport = path.join(tmp, 'handoff.json');
 
   try {
+    await writeSiteEnv(siteRoot, [
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events'
+    ]);
+    await writeFile(fullQaReport, JSON.stringify(baseFullQa()));
+    await writeFile(handoffReport, JSON.stringify({
+      ...handoff(),
+      env: {
+        ready: false,
+        summary: {
+          missing: ['NEXT_PUBLIC_GTM_ID', 'NEXT_PUBLIC_CRM_WEBHOOK_URL'],
+          placeholders: [],
+          invalid: []
+        }
+      }
+    }));
+
+    const report = await auditCompletion({
+      siteRoot,
+      fullQaReport,
+      handoffReport
+    });
+
+    assert.equal(report.blocking_inputs.includes('NEXT_PUBLIC_CRM_WEBHOOK_URL'), false);
+    assert.equal(report.blocking_inputs.includes('NEXT_PUBLIC_GTM_ID'), true);
+    assert.equal(report.blocking_inputs.includes('DOWNSTREAM_CRM_WEBHOOK_URL'), true);
+    assert.deepEqual(report.evidence_files.current_env.loaded_env_files, ['.env.local']);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('completion audit reports ready when all requirement evidence is complete', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-ready-'));
+  const siteRoot = path.join(tmp, 'store');
+  const fullQaReport = path.join(tmp, 'full-qa.json');
+  const handoffReport = path.join(tmp, 'handoff.json');
+
+  try {
+    await writeSiteEnv(siteRoot, READY_ENV.split('\n'));
     await writeFile(fullQaReport, JSON.stringify(baseFullQa({ envReady: true, renderReady: true })));
     await writeFile(handoffReport, JSON.stringify(handoff({ ready: true })));
 
     const report = await auditCompletion({
-      siteRoot: '/tmp/store',
+      siteRoot,
       fullQaReport,
       handoffReport
     });
@@ -191,19 +248,21 @@ test('completion audit reports ready when all requirement evidence is complete',
 
 test('completion audit CLI writes markdown and JSON outputs', async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-cli-'));
+  const siteRoot = path.join(tmp, 'store');
   const fullQaReport = path.join(tmp, 'full-qa.json');
   const handoffReport = path.join(tmp, 'handoff.json');
   const output = path.join(tmp, 'completion.md');
   const jsonOutput = path.join(tmp, 'completion.json');
 
   try {
+    await writeSiteEnv(siteRoot, READY_ENV.split('\n').filter((line) => !line.startsWith('NEXT_PUBLIC_GTM_ID=')));
     await writeFile(fullQaReport, JSON.stringify(baseFullQa()));
     await writeFile(handoffReport, JSON.stringify(handoff()));
 
     const { stdout } = await execFileAsync(process.execPath, [
       fileURLToPath(new URL('../scripts/audit-completion.mjs', import.meta.url)),
       '--site-root',
-      '/tmp/store',
+      siteRoot,
       '--full-qa-report',
       fullQaReport,
       '--handoff-report',
