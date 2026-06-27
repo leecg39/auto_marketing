@@ -1,0 +1,132 @@
+{
+  "workspace_name": "Marketing Automation GA4 Ecommerce",
+  "container_type": "web",
+  "required_ids": {
+    "ga4_measurement_id": "G-XXXXXXXXXX",
+    "google_ads_conversion_id": "AW-XXXXXXXXX",
+    "google_ads_purchase_label": "replace-with-purchase-label",
+    "meta_pixel_id": "replace-with-meta-pixel-id"
+  },
+  "consent": {
+    "default_state": "denied",
+    "updated_by": "MarketingAutomation.setConsent()",
+    "ga4_required": ["analytics_storage"],
+    "ads_required": ["ad_storage", "ad_user_data", "ad_personalization"]
+  },
+  "data_layer_variables": [
+    { "name": "DLV - ecommerce.transaction_id", "path": "ecommerce.transaction_id" },
+    { "name": "DLV - ecommerce.items", "path": "ecommerce.items" },
+    { "name": "DLV - ecommerce.currency", "path": "ecommerce.currency" },
+    { "name": "DLV - ecommerce.value", "path": "ecommerce.value" },
+    { "name": "DLV - ecommerce.tax", "path": "ecommerce.tax" },
+    { "name": "DLV - ecommerce.shipping", "path": "ecommerce.shipping" },
+    { "name": "DLV - ecommerce.coupon", "path": "ecommerce.coupon" },
+    { "name": "DLV - method", "path": "method" },
+    { "name": "DLV - currency", "path": "currency" },
+    { "name": "DLV - value", "path": "value" }
+  ],
+  "custom_event_triggers": [
+    { "name": "CE - view_item", "event_name": "view_item" },
+    { "name": "CE - add_to_cart", "event_name": "add_to_cart" },
+    { "name": "CE - begin_checkout", "event_name": "begin_checkout" },
+    { "name": "CE - purchase", "event_name": "purchase" },
+    { "name": "CE - sign_up", "event_name": "sign_up" },
+    { "name": "CE - login", "event_name": "login" },
+    { "name": "CE - generate_lead", "event_name": "generate_lead" }
+  ],
+  "tags": [
+    {
+      "name": "GA4 - Config",
+      "type": "Google tag",
+      "tag_id": "{{GA4 Measurement ID}}",
+      "trigger": "Initialization - All Pages",
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - view_item",
+      "type": "GA4 Event",
+      "event_name": "view_item",
+      "trigger": "CE - view_item",
+      "parameters": ["items", "currency", "value"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - add_to_cart",
+      "type": "GA4 Event",
+      "event_name": "add_to_cart",
+      "trigger": "CE - add_to_cart",
+      "parameters": ["items", "currency", "value"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - begin_checkout",
+      "type": "GA4 Event",
+      "event_name": "begin_checkout",
+      "trigger": "CE - begin_checkout",
+      "parameters": ["items", "currency", "value", "coupon"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - purchase",
+      "type": "GA4 Event",
+      "event_name": "purchase",
+      "trigger": "CE - purchase",
+      "parameters": ["transaction_id", "items", "currency", "value", "tax", "shipping", "coupon"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - sign_up",
+      "type": "GA4 Event",
+      "event_name": "sign_up",
+      "trigger": "CE - sign_up",
+      "parameters": ["method"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - login",
+      "type": "GA4 Event",
+      "event_name": "login",
+      "trigger": "CE - login",
+      "parameters": ["method"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "GA4 Event - generate_lead",
+      "type": "GA4 Event",
+      "event_name": "generate_lead",
+      "trigger": "CE - generate_lead",
+      "parameters": ["currency", "value"],
+      "consent_required": ["analytics_storage"]
+    },
+    {
+      "name": "Google Ads - Purchase Conversion",
+      "type": "Google Ads Conversion Tracking",
+      "trigger": "CE - purchase",
+      "conversion_id": "{{Google Ads Conversion ID}}",
+      "conversion_label": "{{Google Ads Purchase Label}}",
+      "value": "{{DLV - ecommerce.value}}",
+      "currency": "{{DLV - ecommerce.currency}}",
+      "transaction_id": "{{DLV - ecommerce.transaction_id}}",
+      "consent_required": ["ad_storage", "ad_user_data", "ad_personalization"]
+    },
+    {
+      "name": "Meta Pixel - Ecommerce Events",
+      "type": "Custom HTML",
+      "trigger": "CE - add_to_cart, CE - begin_checkout, CE - purchase",
+      "pixel_id": "{{Meta Pixel ID}}",
+      "event_mapping": {
+        "add_to_cart": "AddToCart",
+        "begin_checkout": "InitiateCheckout",
+        "purchase": "Purchase"
+      },
+      "consent_required": ["ad_storage", "ad_personalization"]
+    }
+  ],
+  "publish_gate": [
+    "GTM Preview에서 7개 Custom Event가 모두 감지된다.",
+    "GA4 DebugView에서 ecommerce.items, value, currency가 보인다.",
+    "purchase 이벤트에 transaction_id가 있고 새로고침 중복이 없다.",
+    "광고 동의 거부 상태에서 Google Ads/Meta 태그가 실행되지 않는다.",
+    "광고 전환 테스트 도구에서 purchase 수신이 확인된다."
+  ]
+}

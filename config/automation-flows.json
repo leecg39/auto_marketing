@@ -1,0 +1,68 @@
+{
+  "segments": [
+    {
+      "name": "cart_abandoners",
+      "entry_event": "add_to_cart",
+      "exit_event": "purchase",
+      "wait_minutes": 60,
+      "channels": ["email", "kakao", "ads"]
+    },
+    {
+      "name": "checkout_abandoners",
+      "entry_event": "begin_checkout",
+      "exit_event": "purchase",
+      "wait_minutes": 30,
+      "channels": ["email", "kakao", "ads"]
+    },
+    {
+      "name": "first_purchase",
+      "entry_event": "purchase",
+      "condition": "order_count == 1",
+      "channels": ["email", "kakao"]
+    },
+    {
+      "name": "recent_purchasers",
+      "entry_event": "purchase",
+      "purpose": "exclude from abandonment and retargeting campaigns",
+      "channels": ["ads"]
+    },
+    {
+      "name": "review_request",
+      "entry_event": "purchase",
+      "wait_days": 7,
+      "channels": ["email", "kakao"]
+    },
+    {
+      "name": "repurchase_due",
+      "entry_event": "purchase",
+      "wait_days": 30,
+      "channels": ["email", "kakao", "ads"]
+    },
+    {
+      "name": "dormant_60_90_days",
+      "condition": "last_purchase_days >= 60",
+      "channels": ["email", "kakao", "ads"]
+    },
+    {
+      "name": "vip_customers",
+      "condition": "lifetime_value >= configured_vip_threshold",
+      "channels": ["email", "kakao"]
+    },
+    {
+      "name": "lead_submitted",
+      "entry_event": "generate_lead",
+      "channels": ["email", "kakao"]
+    },
+    {
+      "name": "active_customers",
+      "entry_event": "login",
+      "purpose": "refresh customer activity and remarketing audience membership",
+      "channels": ["ads"]
+    }
+  ],
+  "message_safety_rules": [
+    "email or phone payloads require marketing_consent == true",
+    "CRM platform must suppress sends when unsubscribe or opt-out exists",
+    "purchase retargeting audiences must exclude users with purchase after campaign entry"
+  ]
+}

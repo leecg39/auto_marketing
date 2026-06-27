@@ -1,0 +1,94 @@
+{
+  "ga4_events": [
+    {
+      "event": "view_item",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: view_item",
+      "parameters": {
+        "items": "{{DLV - ecommerce.items}}",
+        "currency": "{{DLV - ecommerce.currency}}",
+        "value": "{{DLV - ecommerce.value}}"
+      }
+    },
+    {
+      "event": "add_to_cart",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: add_to_cart",
+      "parameters": {
+        "items": "{{DLV - ecommerce.items}}",
+        "currency": "{{DLV - ecommerce.currency}}",
+        "value": "{{DLV - ecommerce.value}}"
+      }
+    },
+    {
+      "event": "begin_checkout",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: begin_checkout",
+      "parameters": {
+        "items": "{{DLV - ecommerce.items}}",
+        "currency": "{{DLV - ecommerce.currency}}",
+        "value": "{{DLV - ecommerce.value}}",
+        "coupon": "{{DLV - ecommerce.coupon}}"
+      }
+    },
+    {
+      "event": "purchase",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: purchase",
+      "parameters": {
+        "transaction_id": "{{DLV - ecommerce.transaction_id}}",
+        "items": "{{DLV - ecommerce.items}}",
+        "currency": "{{DLV - ecommerce.currency}}",
+        "value": "{{DLV - ecommerce.value}}",
+        "tax": "{{DLV - ecommerce.tax}}",
+        "shipping": "{{DLV - ecommerce.shipping}}",
+        "coupon": "{{DLV - ecommerce.coupon}}"
+      }
+    },
+    {
+      "event": "sign_up",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: sign_up",
+      "parameters": {
+        "method": "{{DLV - method}}"
+      }
+    },
+    {
+      "event": "login",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: login",
+      "parameters": {
+        "method": "{{DLV - method}}"
+      }
+    },
+    {
+      "event": "generate_lead",
+      "tag_type": "GA4 Event",
+      "trigger": "Custom Event: generate_lead",
+      "parameters": {
+        "currency": "{{DLV - currency}}",
+        "value": "{{DLV - value}}"
+      }
+    }
+  ],
+  "advertising_events": [
+    {
+      "event": "purchase",
+      "google_ads": "Primary conversion",
+      "meta_pixel": "Purchase",
+      "consent_required": ["ad_storage", "ad_user_data", "ad_personalization"]
+    },
+    {
+      "event": "add_to_cart",
+      "google_ads": "Remarketing audience signal",
+      "meta_pixel": "AddToCart",
+      "consent_required": ["ad_storage", "ad_personalization"]
+    },
+    {
+      "event": "begin_checkout",
+      "google_ads": "Remarketing audience signal",
+      "meta_pixel": "InitiateCheckout",
+      "consent_required": ["ad_storage", "ad_personalization"]
+    }
+  ]
+}

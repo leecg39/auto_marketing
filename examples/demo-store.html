@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marketing Automation Demo Store</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f6f7f9;
+        color: #15171a;
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 20px;
+      }
+
+      .panel {
+        background: #fff;
+        border: 1px solid #d9dde3;
+        border-radius: 8px;
+        padding: 24px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      button {
+        min-height: 44px;
+        border: 1px solid #111;
+        border-radius: 6px;
+        background: #111;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #fff;
+        color: #111;
+      }
+
+      pre {
+        overflow: auto;
+        background: #101318;
+        color: #f5f7fb;
+        border-radius: 8px;
+        padding: 16px;
+        min-height: 180px;
+      }
+
+      #status {
+        margin-top: 20px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #eef6f3;
+        border: 1px solid #b8d6cb;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>자사몰 마케팅 자동화 데모</h1>
+        <p>버튼을 눌러 GA4 dataLayer 이벤트와 CRM 웹훅 페이로드를 확인합니다.</p>
+        <div class="grid">
+          <button id="consent">동의 허용</button>
+          <button id="view" class="secondary">상품 조회</button>
+          <button id="cart" class="secondary">장바구니</button>
+          <button id="checkout" class="secondary">결제 시작</button>
+          <button id="purchase" class="secondary">구매 완료</button>
+          <button id="lead" class="secondary">리드 생성</button>
+        </div>
+        <div id="status">최근 이벤트: 초기화</div>
+        <div id="qa-result" data-ok="pending">QA: 대기</div>
+        <h2>dataLayer</h2>
+        <pre id="output">[]</pre>
+      </section>
+    </main>
+
+    <script src="../src/marketing-automation.js"></script>
+    <script>
+      var product = {
+        item_id: 'SKU_001',
+        item_name: 'Demo Product',
+        item_category: 'Demo Category',
+        price: 129000,
+        quantity: 1
+      };
+
+      var params = new URLSearchParams(window.location.search);
+      var crmWebhookUrl = params.get('crm') || 'http://localhost:8787/crm/events';
+      var gtmId = params.get('gtm') || '';
+
+      MarketingAutomation.init({
+        gtmId: gtmId,
+        crmWebhookUrl: crmWebhookUrl,
+        defaultCurrency: 'KRW',
+        autoSendCrm: false
+      });
+
+      function lastDataLayerEvent() {
+        for (var index = window.dataLayer.length - 1; index >= 0; index -= 1) {
+          if (window.dataLayer[index] && window.dataLayer[index].event) {
+            return window.dataLayer[index].event;
+          }
+        }
+
+        return 'none';
+      }
+
+      function render(status) {
+        if (status) {
+          document.getElementById('status').textContent = status;
+        }
+        document.getElementById('output').textContent = JSON.stringify(window.dataLayer, null, 2);
+      }
+
+      function crmSummary(result) {
+        if (!result) {
+          return 'CRM: not sent';
+        }
+
+        if (result.skipped) {
+          return 'CRM: skipped ' + result.reason;
+        }
+
+        if (result.automation_flow) {
+          return 'CRM: ' + result.automation_flow;
+        }
+
+        return 'CRM: status ' + result.status;
+      }
+
+      function handleCrm(eventName, payload) {
+        return MarketingAutomation.sendCrmEvent(eventName, payload)
+          .then(function (result) {
+            render('최근 이벤트: ' + lastDataLayerEvent() + ' / ' + crmSummary(result));
+            return result;
+          })
+          .catch(function (error) {
+            render('최근 이벤트: ' + lastDataLayerEvent() + ' / CRM error: ' + error.message);
+            throw error;
+          });
+      }
+
+      function grantConsent() {
+        MarketingAutomation.setConsent({ analytics: true, ads: true, marketing: true, crm: true });
+        render('최근 이벤트: consent granted');
+        return Promise.resolve({ event_name: 'consent' });
+      }
+
+      function trackView() {
+        MarketingAutomation.trackViewItem(product);
+        render('최근 이벤트: ' + lastDataLayerEvent() + ' / CRM: not sent');
+        return Promise.resolve({ event_name: 'view_item' });
+      }
+
+      function trackCart() {
+        var payload = Object.assign({}, product, {
+          email: 'test@example.com',
+          marketing_consent: true
+        });
+        MarketingAutomation.trackAddToCart(payload);
+        return handleCrm('add_to_cart', payload);
+      }
+
+      function trackCheckout() {
+        var payload = {
+          cart_id: 'CART-001',
+          value: 129000,
+          items: [product],
+          email: 'test@example.com',
+          marketing_consent: true
+        };
+        MarketingAutomation.trackBeginCheckout(payload);
+        return handleCrm('begin_checkout', payload);
+      }
+
+      function trackPurchase(transactionId) {
+        var payload = {
+          transaction_id: transactionId || 'ORDER-' + Date.now(),
+          value: 129000,
+          shipping: 0,
+          items: [product],
+          email: 'test@example.com',
+          marketing_consent: true
+        };
+        var event = MarketingAutomation.trackPurchase(payload);
+        if (event && event.skipped) {
+          render('최근 이벤트: purchase skipped / ' + event.reason);
+          return Promise.resolve(event);
+        }
+        return handleCrm('purchase', payload);
+      }
+
+      function trackLead() {
+        var payload = {
+          value: 10000,
+          email: 'test@example.com',
+          phone: '01012345678',
+          marketing_consent: true
+        };
+        MarketingAutomation.trackGenerateLead(payload);
+        return handleCrm('generate_lead', payload);
+      }
+
+      function dataLayerEvents() {
+        return window.dataLayer
+          .filter(function (entry) { return entry && entry.event; })
+          .map(function (entry) { return entry.event; });
+      }
+
+      function dataLayerContainsPii() {
+        return /test@example\.com|01012345678/.test(JSON.stringify(window.dataLayer));
+      }
+
+      function writeQaResult(result) {
+        var target = document.getElementById('qa-result');
+        target.dataset.ok = result.ok ? 'true' : 'false';
+        target.textContent = 'QA: ' + JSON.stringify(result);
+      }
+
+      function runAutorunQa() {
+        var expectedEvents = [
+          'view_item',
+          'add_to_cart',
+          'begin_checkout',
+          'purchase',
+          'generate_lead'
+        ];
+        var purchaseId = 'ORDER-AUTORUN-001';
+        var crmResults = [];
+
+        return grantConsent()
+          .then(trackView)
+          .then(function () { return trackCart(); })
+          .then(function (result) {
+            crmResults.push(result);
+            return trackCheckout();
+          })
+          .then(function (result) {
+            crmResults.push(result);
+            return trackPurchase(purchaseId);
+          })
+          .then(function (result) {
+            crmResults.push(result);
+            return trackLead();
+          })
+          .then(function (result) {
+            crmResults.push(result);
+            return trackPurchase(purchaseId);
+          })
+          .then(function (duplicatePurchase) {
+            var events = dataLayerEvents();
+            var missingEvents = expectedEvents.filter(function (eventName) {
+              return events.indexOf(eventName) === -1;
+            });
+            var crmFlows = crmResults
+              .filter(function (result) { return result && result.automation_flow; })
+              .map(function (result) { return result.automation_flow; });
+            var automationActionFlows = crmResults.reduce(function (flows, result) {
+              if (!result || !Array.isArray(result.automation_actions)) {
+                return flows;
+              }
+
+              return flows.concat(result.automation_actions.map(function (action) {
+                return action.flow;
+              }));
+            }, []);
+            var deliveryStatuses = crmResults.map(function (result) {
+              return result && result.delivery ? result.delivery.status : null;
+            });
+
+            var result = {
+              ok: missingEvents.length === 0 &&
+                automationActionFlows.indexOf('cart_abandonment_reminder') !== -1 &&
+                automationActionFlows.indexOf('checkout_abandonment_reminder') !== -1 &&
+                automationActionFlows.indexOf('review_request') !== -1 &&
+                automationActionFlows.indexOf('repurchase_due') !== -1 &&
+                deliveryStatuses.every(function (status) { return status === 202; }) &&
+                !dataLayerContainsPii() &&
+                duplicatePurchase.skipped === true,
+              events: events,
+              missing_events: missingEvents,
+              crm_flows: crmFlows,
+              automation_action_flows: automationActionFlows,
+              delivery_statuses: deliveryStatuses,
+              pii_in_data_layer: dataLayerContainsPii(),
+              duplicate_purchase: duplicatePurchase
+            };
+
+            writeQaResult(result);
+            render('최근 이벤트: autorun complete');
+            return result;
+          })
+          .catch(function (error) {
+            writeQaResult({ ok: false, error: error.message });
+            throw error;
+          });
+      }
+
+      document.getElementById('consent').addEventListener('click', grantConsent);
+      document.getElementById('view').addEventListener('click', trackView);
+      document.getElementById('cart').addEventListener('click', trackCart);
+      document.getElementById('checkout').addEventListener('click', trackCheckout);
+      document.getElementById('purchase').addEventListener('click', function () {
+        trackPurchase();
+      });
+      document.getElementById('lead').addEventListener('click', trackLead);
+
+      render('최근 이벤트: 초기화');
+
+      if (params.get('autorun') === '1') {
+        window.__marketingAutomationQa = runAutorunQa();
+      }
+    </script>
+  </body>
+</html>
