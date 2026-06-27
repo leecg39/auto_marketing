@@ -98,9 +98,10 @@ npm run handoff:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 ```
 
-운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다.
+운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
 
 ```bash
+cp examples/marketing-production.env.example /path/to/marketing-production.env
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env
 ```

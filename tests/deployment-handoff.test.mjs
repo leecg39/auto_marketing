@@ -25,6 +25,22 @@ test('builds a deployment env template with required marketing keys', () => {
   assert.equal(block.includes('NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY=KRW'), true);
 });
 
+test('committed production env example covers every handoff env key', async () => {
+  const example = await readFile(
+    new URL('../examples/marketing-production.env.example', import.meta.url),
+    'utf8'
+  );
+  const requiredKeys = envBlock().split('\n').map((line) => line.split('=')[0]);
+
+  for (const key of requiredKeys) {
+    assert.match(example, new RegExp(`^${key}=`, 'm'));
+  }
+
+  assert.equal(example.includes('replace-with-crm-api-key'), true);
+  assert.equal(example.includes('secret-api-key'), false);
+  assert.equal(example.includes('buyer@example.com'), false);
+});
+
 test('parses deployment handoff arguments', () => {
   const parsed = parseArgs([
     '--site-root',

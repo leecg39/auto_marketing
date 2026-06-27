@@ -6,6 +6,7 @@
 - [ ] `npm run full:qa -- --site-root /path/to/store --start-local --start-site --site-port 3100`가 통과하고 `dist/full-qa-report.json`이 생성된다.
 - [ ] `npm run audit:completion -- --site-root /path/to/store`가 `dist/completion-audit.json`을 생성하고 요구사항별 완료/외부 차단 상태를 표시한다.
 - [ ] `npm run handoff:deployment -- --site-root /path/to/store`가 통과하고 `dist/deployment-handoff.md`가 생성된다.
+- [ ] `examples/marketing-production.env.example`을 복사한 운영 env 파일에 placeholder가 남아 있지 않다.
 - [ ] 운영값을 받은 뒤 `npm run apply:env -- --site-root /path/to/store --env-file /path/to/marketing-production.env --dry-run`에서 raw secret이 출력되지 않고 readiness가 확인된다.
 - [ ] 운영값을 받은 뒤 `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env --dry-run`이 raw secret 없이 통과한다.
 - [ ] 운영값을 받은 뒤 `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env`가 strict full QA와 완료 감사까지 통과한다.

@@ -14,6 +14,7 @@
 - `docs/live-deployment.md`: 실제 자사몰 적용 절차
 - `docs/execution-status.md`: 이 컴퓨터에서 실행/검증된 상태
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
+- `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `scripts/reconcile-revenue.mjs`: 주문 DB와 GA4 매출 CSV 일 단위 대조기
 
 ## 1. 사이트 공통 레이아웃에 SDK 추가
@@ -91,10 +92,11 @@ npm run audit:completion -- --site-root /path/to/your-store
 
 handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다.
 
-운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. 출력에는 값이 마스킹됩니다.
+운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 출력에는 값이 마스킹됩니다.
 
 ```bash
 cd marketing-automation-kit
+cp examples/marketing-production.env.example /path/to/marketing-production.env
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env
 npm run apply:env -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run
