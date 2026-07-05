@@ -96,7 +96,7 @@ npm run validate:env -- /path/to/applied-store
   - 추천 플랫폼: `vercel`
   - Vercel CLI: 설치됨, 로그인 계정 `leecg39-8923`
   - Vercel 프로젝트 목록: `annatars-projects` scope에서 9개 조회
-  - 기존 프로젝트 후보: `shopping-mall` (`prj_jbiz4pdFrJWDmVgFK030WPSzNRYk`, weak ecommerce context)
+  - 기존 프로젝트 후보: `shopping-mall` (`prj_jbiz4pdFrJWDmVgFK030WPSzNRYk`, weak ecommerce context, latest production URL `404`)
   - 추천 Vercel 프로젝트: 없음, 이름이 충분히 일치하는 프로젝트가 없어 link 명령은 `<project-name-or-id>` placeholder 유지
   - Vercel project link: `false`
   - production deploy ready: `false`
@@ -118,7 +118,7 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
-- `npm test`: 92개 테스트 통과
+- `npm test`: 93개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 배포 대상 점검기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트, production runtime QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`

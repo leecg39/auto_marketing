@@ -176,7 +176,14 @@ function scoreVercelProject(project, signals) {
       : '',
     updated_at: project.updatedAt || null,
     score,
-    reasons
+    reasons,
+    url_probe: {
+      checked: false,
+      ok: false,
+      status: null,
+      title: '',
+      error: ''
+    }
   };
 }
 
@@ -332,7 +339,70 @@ async function runCommand(command, args, options = {}) {
   });
 }
 
-async function inspectVercel(root, files, packageJson = {}, runner = runCommand) {
+async function probeUrl(url, options = {}) {
+  if (!url) {
+    return {
+      checked: false,
+      ok: false,
+      status: null,
+      title: '',
+      error: 'missing_url'
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs || 5000);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'marketing-automation-kit-deployment-inspector'
+      }
+    });
+    const contentType = response.headers.get('content-type') || '';
+    const text = contentType.includes('text/html') ? await response.text() : '';
+    const titleMatch = text.match(/<title[^>]*>(.*?)<\/title>/is);
+    const title = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+
+    return {
+      checked: true,
+      ok: response.ok,
+      status: response.status,
+      title,
+      error: ''
+    };
+  } catch (error) {
+    return {
+      checked: true,
+      ok: false,
+      status: null,
+      title: '',
+      error: error.name === 'AbortError' ? 'timeout' : error.message
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function annotateProjectUrlProbes(projects, urlProbe = probeUrl) {
+  return await Promise.all(projects.map(async (project) => ({
+    ...project,
+    url_probe: project.latest_production_url
+      ? await urlProbe(project.latest_production_url)
+      : {
+          checked: false,
+          ok: false,
+          status: null,
+          title: '',
+          error: 'missing_url'
+        }
+  })));
+}
+
+async function inspectVercel(root, files, packageJson = {}, runner = runCommand, urlProbe = probeUrl) {
   const projectJson = await readJsonIfExists(path.join(root, '.vercel', 'project.json'));
   const version = await runner('vercel', ['--version'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS });
   const whoami = version.ok
@@ -342,7 +412,10 @@ async function inspectVercel(root, files, packageJson = {}, runner = runCommand)
     ? await runner('vercel', ['projects', 'ls', '--format=json'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS })
     : null;
   const projectsJson = projectsResult?.ok ? extractJsonObject(projectsResult.stdout || projectsResult.stderr) : null;
-  const projectCandidates = rankVercelProjects(projectsJson?.projects || [], root, packageJson).slice(0, 5);
+  const projectCandidates = await annotateProjectUrlProbes(
+    rankVercelProjects(projectsJson?.projects || [], root, packageJson).slice(0, 5),
+    urlProbe
+  );
   const recommendedProject = projectCandidates.find((candidate) => candidate.score >= 12) || null;
 
   return {
@@ -376,7 +449,13 @@ async function inspectDeploymentTarget(options, runtime = {}) {
   const packageManager = detectPackageManager(files);
   const framework = detectFramework(packageJson, files);
   const env = await validateDeploymentEnv(siteRoot);
-  const vercel = await inspectVercel(siteRoot, files, packageJson || {}, runtime.runCommand || runCommand);
+  const vercel = await inspectVercel(
+    siteRoot,
+    files,
+    packageJson || {},
+    runtime.runCommand || runCommand,
+    runtime.probeUrl || probeUrl
+  );
   const netlify = {
     detected: files.has('netlify.toml') || files.has('.netlify/state.json'),
     config_file: files.has('netlify.toml') ? 'netlify.toml' : '',
@@ -597,6 +676,8 @@ function renderVercelProjectCandidates(projects) {
       const suffix = [
         `score=${project.score}`,
         project.latest_production_url ? `url=${project.latest_production_url}` : '',
+        project.url_probe?.checked ? `http=${project.url_probe.status || project.url_probe.error}` : '',
+        project.url_probe?.title ? `title=${project.url_probe.title}` : '',
         project.reasons.length ? `reasons=${project.reasons.join(',')}` : ''
       ].filter(Boolean).join(' / ');
       return `- \`${project.name}\` (${project.id})${suffix ? `: ${suffix}` : ''}`;
@@ -782,6 +863,7 @@ export {
   extractJsonObject,
   inspectDeploymentTarget,
   parseArgs,
+  probeUrl,
   quoteShell,
   rankVercelProjects,
   renderMarkdown
