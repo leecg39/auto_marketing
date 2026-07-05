@@ -30,6 +30,7 @@
   - env 3개 반영 deployment: `dpl_3enpokm8WGy4UYhX9ucJhgyrAXyH`
   - Google Ads conversion ID 반영 deployment: `dpl_8MkfXoGgeCk1taUoqrZpehXFozAu`
   - env readiness `next_actions` 반영 deployment: `dpl_CHcRbN9tR3kPs9zFipguGf9i98Na`
+  - env readiness confirmation gate 반영 deployment: `dpl_QFqEcpfVnnPwqDF1uzngWc1muAHz`
   - env readiness 검증 deployment URL: `https://auto-marketing-estq4q908-petasos.vercel.app`
   - production alias: `https://auto-marketing-sigma.vercel.app`
   - 상태: `READY`
@@ -45,6 +46,7 @@
   - 외부 계정 생성/수정 또는 고객 연락처를 외부 공급자로 전송할 수 있는 액션은 `confirmation_required=true`로 표시
   - `/dashboard`에서 남은 외부 계정 액션을 서비스별로 표시
   - production alias `https://auto-marketing-sigma.vercel.app`에서 반영 확인
+  - production alias에서 GTM, GA4, Google Ads, Meta Pixel, CRM webhook 5개 액션 모두 `confirmation_required=true` 확인
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -111,6 +113,7 @@ npm run validate:env -- /path/to/applied-store
   - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
   - `/api/marketing/env-status` GET: `200`, production env readiness 요약 반환, 원본 env 값 미노출
   - `/dashboard` headless Chrome DOM: GTM, GA4, Google Ads, Meta Pixel, CRM webhook 다음 액션 5개 렌더링 확인
+  - `/dashboard` headless Chrome DOM: 외부 계정 액션에 `실행 전 확인 필요` 라벨 렌더링 확인
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`: Vercel production 자동 검증 통과
   - 리포트: `dist/vercel-production-report.json`
   - 요약: `passed=7`, `failed=0`
@@ -348,13 +351,13 @@ npm run stop:local
 
 ## 이 컴퓨터에서 확인한 외부 계정 상태
 
-확인일: 2026-06-27
+확인일: 2026-07-05
 
 - Google 계정: `leecg2908@gmail.com`
 - GTM: 계정 생성 폼이 `oliveyoung-shopee`, 국가 `대한민국`, 웹 컨테이너 `oliveyoung-shopee-web`로 준비되어 있으나, 최종 `만들기` 버튼은 누르지 않았습니다.
 - GA4: Analytics가 초기 `측정 시작` 화면에 있어 GA4 속성/웹 스트림/측정 ID가 아직 없습니다.
 - Google Ads: 계정 `446-442-5600`을 확인했고, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600`를 로컬 후보 사이트 env와 Vercel production env에 반영했습니다. 구매 전환 액션 라벨은 아직 없습니다.
 - Meta: Business Settings > Data Sources > Data sets and pixels에서 기존 데이터 세트/픽셀이 없습니다.
-- 운영 도메인: 후보 사이트 저장소와 배포 설정에서 운영 URL을 찾지 못했습니다. 후보 사이트 `.env.local`의 `NEXT_PUBLIC_APP_URL`은 localhost입니다.
+- 운영 도메인: Vercel production alias `https://auto-marketing-sigma.vercel.app`를 현재 실행 표면으로 사용 중입니다. 별도 상용 자사몰 도메인을 붙이면 `NEXT_PUBLIC_APP_URL`과 GA4/광고 landing page 기준 URL을 다시 갱신해야 합니다.
 
 외부 계정 리소스 생성, 전환 액션 생성, 픽셀 생성, GTM 게시, 광고 설정 진행은 실제 계정 상태를 바꾸므로 실행 직전 사용자 확인과 운영 도메인이 필요합니다.
