@@ -49,12 +49,15 @@ test('parses deployment handoff arguments', () => {
     '--output',
     '/tmp/handoff.md',
     '--json-output',
-    '/tmp/handoff.json'
+    '/tmp/handoff.json',
+    '--deployment-target',
+    '/tmp/deployment-target.json'
   ]);
 
   assert.equal(parsed.siteRoot, '/tmp/store');
   assert.equal(parsed.output, '/tmp/handoff.md');
   assert.equal(parsed.jsonOutput, '/tmp/handoff.json');
+  assert.equal(parsed.deploymentTarget, '/tmp/deployment-target.json');
 });
 
 test('marks missing deployment keys as required inputs', () => {
@@ -80,6 +83,7 @@ test('generates markdown and JSON deployment handoff', async () => {
   const fullQaReport = path.join(tmp, 'full-qa-report.json');
   const gtmImport = path.join(tmp, 'gtm-container-import.json');
   const completionAudit = path.join(tmp, 'completion-audit.json');
+  const deploymentTarget = path.join(tmp, 'deployment-target-plan.json');
 
   try {
     await writeFile(path.join(tmp, 'placeholder'), '');
@@ -104,19 +108,40 @@ test('generates markdown and JSON deployment handoff', async () => {
         variable: [{}, {}, {}]
       }
     }));
+    await writeFile(deploymentTarget, JSON.stringify({
+      ready_for_production_deploy: false,
+      recommended_platform: {
+        id: 'vercel'
+      },
+      hosting: {
+        vercel: {
+          cli: {
+            logged_in: true
+          },
+          project_linked: false
+        }
+      },
+      blockers: [
+        { id: 'hosting_project_not_linked' }
+      ]
+    }));
 
     const { report, markdown } = await generateDeploymentHandoff({
       siteRoot,
       fullQaReport,
       gtmImport,
-      completionAudit
+      completionAudit,
+      deploymentTarget
     });
 
     assert.equal(report.env.ready, false);
     assert.equal(report.full_qa.local_qa_ok, true);
     assert.equal(report.gtm_import.tags, 2);
+    assert.equal(report.deployment_target.recommended_platform.id, 'vercel');
     assert.equal(report.artifacts.completion_audit.exists, false);
+    assert.equal(report.artifacts.deployment_target.exists, true);
     assert.equal(markdown.includes('마케팅 자동화 배포 Handoff'), true);
+    assert.equal(markdown.includes('배포 대상 점검'), true);
     assert.equal(markdown.includes('npm run audit:completion'), true);
     assert.equal(markdown.includes('NEXT_PUBLIC_GTM_ID'), true);
   } finally {

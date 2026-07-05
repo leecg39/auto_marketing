@@ -11,6 +11,7 @@ const DEFAULT_MARKDOWN_OUTPUT = path.join(KIT_ROOT, 'dist', 'deployment-handoff.
 const DEFAULT_JSON_OUTPUT = path.join(KIT_ROOT, 'dist', 'deployment-handoff.json');
 const DEFAULT_GTM_IMPORT = path.join(KIT_ROOT, 'dist', 'gtm-container-import.json');
 const DEFAULT_COMPLETION_AUDIT = path.join(KIT_ROOT, 'dist', 'completion-audit.json');
+const DEFAULT_DEPLOYMENT_TARGET = path.join(KIT_ROOT, 'dist', 'deployment-target-plan.json');
 
 const EXTRA_ENV_KEYS = [
   {
@@ -132,6 +133,25 @@ function renderGtmSummary(gtmSummary) {
   ].join('\n');
 }
 
+function renderDeploymentTargetSummary(deploymentTarget) {
+  if (!deploymentTarget) {
+    return '- 배포 대상 점검 리포트가 없습니다. `npm run inspect:deployment -- --site-root /path/to/store`를 먼저 실행하세요.';
+  }
+
+  const blockers = Array.isArray(deploymentTarget.blockers) && deploymentTarget.blockers.length
+    ? deploymentTarget.blockers.map((blocker) => `\`${blocker.id}\``).join(', ')
+    : '없음';
+
+  return [
+    `- production deploy ready: \`${deploymentTarget.ready_for_production_deploy}\``,
+    `- recommended platform: \`${deploymentTarget.recommended_platform?.id || 'unknown'}\``,
+    `- Vercel login: \`${deploymentTarget.hosting?.vercel?.cli?.logged_in ?? 'unknown'}\``,
+    `- Vercel project linked: \`${deploymentTarget.hosting?.vercel?.project_linked ?? 'unknown'}\``,
+    `- blockers: ${blockers}`,
+    '- file: `dist/deployment-target-plan.md`'
+  ].join('\n');
+}
+
 function renderMarkdown(report) {
   const missing = report.env.summary.missing.length
     ? report.env.summary.missing.map((key) => `\`${key}\``).join(', ')
@@ -165,6 +185,10 @@ function renderMarkdown(report) {
     '',
     renderGtmSummary(report.gtm_import),
     '',
+    '## 배포 대상 점검',
+    '',
+    renderDeploymentTargetSummary(report.deployment_target),
+    '',
     '## 완료 감사',
     '',
     `- command: \`npm run audit:completion -- --site-root ${report.site_root}\``,
@@ -191,6 +215,7 @@ function renderMarkdown(report) {
     `npm run render:gtm -- --site-root ${report.site_root}`,
     `npm run verify:gtm -- --input dist/gtm-container-import.production.json`,
     `npm run validate:env -- ${report.site_root}`,
+    `npm run inspect:deployment -- --site-root ${report.site_root}`,
     `npm run full:qa -- --site-root ${report.site_root} --start-local --start-site --site-port 3100 --require-env-ready`,
     `npm run audit:completion -- --site-root ${report.site_root}`,
     '```',
@@ -211,12 +236,15 @@ async function generateDeploymentHandoff(options) {
   const fullQa = await readJsonIfExists(options.fullQaReport || DEFAULT_FULL_QA_REPORT);
   const gtmImport = await readJsonIfExists(options.gtmImport || DEFAULT_GTM_IMPORT);
   const completionAudit = options.completionAudit || DEFAULT_COMPLETION_AUDIT;
+  const deploymentTargetFile = options.deploymentTarget || DEFAULT_DEPLOYMENT_TARGET;
+  const deploymentTarget = await readJsonIfExists(deploymentTargetFile);
   const report = {
     generated_at: new Date().toISOString(),
     site_root: siteRoot,
     env,
     full_qa: fullQa,
     gtm_import: summarizeGtmImport(gtmImport),
+    deployment_target: deploymentTarget,
     required_inputs: buildRequiredInputs(env),
     env_template: envBlock(),
     artifacts: {
@@ -231,6 +259,10 @@ async function generateDeploymentHandoff(options) {
       completion_audit: {
         file: completionAudit,
         exists: await pathExists(completionAudit)
+      },
+      deployment_target: {
+        file: deploymentTargetFile,
+        exists: await pathExists(deploymentTargetFile)
       }
     }
   };
@@ -247,7 +279,8 @@ function parseArgs(args) {
     jsonOutput: DEFAULT_JSON_OUTPUT,
     fullQaReport: DEFAULT_FULL_QA_REPORT,
     gtmImport: DEFAULT_GTM_IMPORT,
-    completionAudit: DEFAULT_COMPLETION_AUDIT
+    completionAudit: DEFAULT_COMPLETION_AUDIT,
+    deploymentTarget: DEFAULT_DEPLOYMENT_TARGET
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -289,6 +322,9 @@ function parseArgs(args) {
     if (key === 'completion-audit') {
       parsed.completionAudit = path.resolve(value);
     }
+    if (key === 'deployment-target') {
+      parsed.deploymentTarget = path.resolve(value);
+    }
   }
 
   return parsed;
@@ -304,7 +340,8 @@ function usage() {
     '  --json-output FILE     JSON handoff output. Default: dist/deployment-handoff.json',
     '  --full-qa-report FILE  Full QA report input. Default: dist/full-qa-report.json',
     '  --gtm-import FILE      GTM import input. Default: dist/gtm-container-import.json',
-    '  --completion-audit FILE Completion audit input. Default: dist/completion-audit.json'
+    '  --completion-audit FILE Completion audit input. Default: dist/completion-audit.json',
+    '  --deployment-target FILE Deployment target input. Default: dist/deployment-target-plan.json'
   ].join('\n');
 }
 

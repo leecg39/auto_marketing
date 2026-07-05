@@ -13,6 +13,7 @@
 - [ ] 운영값을 받은 뒤 `npm run render:gtm -- --site-root /path/to/store`가 `dist/gtm-container-import.production.json`을 생성하고 `npm run verify:gtm -- --input dist/gtm-container-import.production.json`이 통과한다.
 - [ ] `npm run audit:site -- /path/to/store`에서 SDK, Provider, CRM route 설치가 확인된다.
 - [ ] `npm run validate:env -- /path/to/store`에서 운영 값 readiness가 `true`다.
+- [ ] `npm run inspect:deployment -- --site-root /path/to/store`에서 배포 플랫폼 링크와 운영 URL이 준비 상태다.
 - [ ] `npm run verify:browser`에서 headless Chrome 데모 QA가 통과한다.
 - [ ] `npm run verify:site -- --site-url http://127.0.0.1:3000`에서 실제 사이트 SDK, consent UI, CRM route 런타임 QA가 통과한다.
 - [ ] `npm run verify:prod-site -- --site-root /path/to/store --build --event-probe`에서 production runtime 이벤트 probe가 통과한다.

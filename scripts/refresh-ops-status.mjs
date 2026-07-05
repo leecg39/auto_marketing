@@ -225,6 +225,16 @@ function buildSteps(options) {
 
   steps.push(
     {
+      id: 'deployment_target',
+      label: 'Deployment target readiness refresh',
+      command: process.execPath,
+      args: [
+        path.join(KIT_ROOT, 'scripts', 'inspect-deployment-target.mjs'),
+        '--site-root',
+        options.siteRoot
+      ]
+    },
+    {
       id: 'handoff',
       label: 'Deployment handoff refresh',
       command: process.execPath,

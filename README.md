@@ -16,6 +16,7 @@
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
 - `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `scripts/reconcile-revenue.mjs`: 주문 DB와 GA4 매출 CSV 일 단위 대조기
+- `scripts/inspect-deployment-target.mjs`: 배포 플랫폼 링크, Vercel CLI 로그인, 운영 URL/env 차단점 점검기
 - `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 - `scripts/refresh-ops-status.mjs`: full QA, handoff, 완료 감사, 운영 대시보드를 한 번에 갱신하는 오케스트레이터
 
@@ -71,6 +72,7 @@ npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3000
 npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 ```
 
@@ -92,11 +94,12 @@ cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`와 `dist/external-account-setup.json`에 저장됩니다. 전체 갱신 리포트는 `dist/ops-refresh-report.json`에 저장됩니다.
+전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 배포 대상 점검은 `dist/deployment-target-plan.md`와 `dist/deployment-target-plan.json`에 저장됩니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`와 `dist/external-account-setup.json`에 저장됩니다. 전체 갱신 리포트는 `dist/ops-refresh-report.json`에 저장됩니다.
 
 운영 계정값을 입력할 사람에게 넘길 체크리스트와 env 블록은 아래 명령으로 생성합니다.
 
@@ -104,11 +107,12 @@ npm run dashboard:ops -- --site-root /path/to/your-store
 cd marketing-automation-kit
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run handoff:external -- --site-root /path/to/your-store
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트, 수집할 값, 운영 URL 탐색 결과는 `dist/external-account-setup.md`에서 확인합니다.
+handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트, 수집할 값, 운영 URL 탐색 결과는 `dist/external-account-setup.md`에서 확인합니다. 배포 프로젝트 링크, Vercel production env 입력, production deploy처럼 외부 상태를 바꾸는 명령은 `dist/deployment-target-plan.md`에 `확인 필요: true`로 표시됩니다.
 
 운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 출력에는 값이 마스킹됩니다.
 
@@ -369,6 +373,7 @@ npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv -
 cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run verify:gtm
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run apply:env -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run

@@ -97,6 +97,7 @@ npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
@@ -108,11 +109,12 @@ npm run dashboard:ops -- --site-root /path/to/your-store
 ```bash
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run handoff:external -- --site-root /path/to/your-store
+npm run inspect:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-운영 대시보드는 `dist/growth-ops-dashboard.html`에 생성됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`에 생성되며, 운영 URL 후보 탐색 결과도 함께 표시합니다. 운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
+운영 대시보드는 `dist/growth-ops-dashboard.html`에 생성됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`에 생성되며, 운영 URL 후보 탐색 결과도 함께 표시합니다. 배포 대상 점검은 `dist/deployment-target-plan.md`에 생성되며, Vercel project link, production env add, production deploy처럼 외부 상태를 바꾸는 명령을 확인 게이트와 함께 표시합니다. 운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
 
 ```bash
 cp examples/marketing-production.env.example /path/to/marketing-production.env
@@ -135,13 +137,14 @@ npm run audit:completion -- --site-root /path/to/your-store --strict
 3. `npm run verify:browser`로 headless Chrome에서 dataLayer 이벤트, CRM 플로우, downstream 전달, 구매 중복 방지, 개인정보 제거를 확인합니다.
 4. 자사몰 dev 서버를 띄운 뒤 `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`로 SDK, consent UI, CRM route, 실제 dataLayer 이벤트 7개, 구매 중복 방지, 개인정보 제거를 확인합니다.
 5. `npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe`로 `next start` production runtime에서도 같은 검증이 통과하는지 확인합니다.
-6. `npm run audit:site -- /path/to/your-store`에서 SDK, Provider, CRM route, 7개 이벤트 지원이 확인됩니다.
-7. `npm run validate:env -- /path/to/your-store`에서 `ready: true`가 나옵니다.
-8. `npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env`가 통과합니다.
-9. `npm run audit:completion -- --site-root /path/to/your-store --strict`에서 완료 판정이 `true`입니다.
-10. 운영 배포 후 GTM Preview와 GA4 DebugView에서 이벤트를 확인합니다.
-11. 주문 DB 매출과 GA4 매출을 48시간 뒤 export해서 `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`로 비교합니다.
-12. Google Ads/Meta 테스트 도구에서 구매 전환 수신을 확인합니다.
+6. `npm run inspect:deployment -- --site-root /path/to/your-store`에서 배포 플랫폼 링크, 운영 URL, 운영 env 차단점이 확인됩니다.
+7. `npm run audit:site -- /path/to/your-store`에서 SDK, Provider, CRM route, 7개 이벤트 지원이 확인됩니다.
+8. `npm run validate:env -- /path/to/your-store`에서 `ready: true`가 나옵니다.
+9. `npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env`가 통과합니다.
+10. `npm run audit:completion -- --site-root /path/to/your-store --strict`에서 완료 판정이 `true`입니다.
+11. 운영 배포 후 GTM Preview와 GA4 DebugView에서 이벤트를 확인합니다.
+12. 주문 DB 매출과 GA4 매출을 48시간 뒤 export해서 `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`로 비교합니다.
+13. Google Ads/Meta 테스트 도구에서 구매 전환 수신을 확인합니다.
 
 ## 완료 기준
 

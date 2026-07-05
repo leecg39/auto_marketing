@@ -26,11 +26,13 @@
 ```bash
 cd marketing-automation-kit
 npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
+npm run ops:refresh -- --site-root /path/to/applied-store --skip-full-qa
 npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000
 npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
 npm run full:qa -- --site-root /path/to/applied-store --skip-live --site-port 3101 --site-event-probe --site-production-probe --timeout-ms 240000
 npm run handoff:deployment -- --site-root /path/to/applied-store
 npm run handoff:external -- --site-root /path/to/applied-store
+npm run inspect:deployment -- --site-root /path/to/applied-store
 npm run apply:env -- --site-root /path/to/applied-store --env-file /path/to/marketing-production.env --dry-run
 npm run render:gtm -- --site-root /path/to/applied-store --dry-run
 npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa
@@ -56,6 +58,13 @@ npm run validate:env -- /path/to/applied-store
   - 대시보드: `dist/growth-ops-dashboard.html`
   - 외부 계정 체크리스트: `dist/external-account-setup.md`
   - 요약: `passed=5`, `warning=0`, `skipped=0`, `failed=0`
+- `npm run ops:refresh -- --site-root /path/to/applied-store --skip-full-qa`: 최신 산출물 재생성 통과
+  - 리포트: `dist/ops-refresh-report.json`
+  - 배포 대상 점검: `dist/deployment-target-plan.md`, `dist/deployment-target-plan.json`
+  - handoff: `dist/deployment-handoff.md`, `dist/deployment-handoff.json`
+  - 대시보드: `dist/growth-ops-dashboard.html`
+  - 요약: `passed=5`, `warning=0`, `skipped=1`, `failed=0`
+  - 실행 step: `deployment_target`, `handoff`, `external_setup`, `completion_audit`, `ops_dashboard`
 - `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`
@@ -73,6 +82,7 @@ npm run validate:env -- /path/to/applied-store
 - `npm run handoff:deployment -- --site-root /path/to/applied-store`: 통과
   - 문서: `dist/deployment-handoff.md`
   - JSON: `dist/deployment-handoff.json`
+  - 배포 대상 점검 요약 포함: Vercel 로그인 `true`, Vercel project linked `false`, blocker `hosting_project_not_linked`, `marketing_env_not_ready`
   - 차단 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_APP_URL`
 - `npm run handoff:external -- --site-root /path/to/applied-store`: 통과
   - 문서: `dist/external-account-setup.md`
@@ -80,6 +90,15 @@ npm run validate:env -- /path/to/applied-store
   - 외부 실행 항목: 운영 도메인, GTM 컨테이너, GA4 웹 스트림, Google Ads 구매 전환, Meta 픽셀, CRM webhook
   - 운영 URL 탐색 결과: 후보 사이트 env에서 `http://localhost:3000`만 발견, 운영 HTTPS URL 추천값 없음
   - 모든 계정 리소스 생성/게시/실제 발송은 Computer Use 실행 직전 사용자 확인 게이트 포함
+- `npm run inspect:deployment -- --site-root /path/to/applied-store`: 배포 대상 점검 통과
+  - 문서: `dist/deployment-target-plan.md`
+  - JSON: `dist/deployment-target-plan.json`
+  - 추천 플랫폼: `vercel`
+  - Vercel CLI: 설치됨, 로그인 계정 `leecg39-8923`
+  - Vercel project link: `false`
+  - production deploy ready: `false`
+  - blocker: `hosting_project_not_linked`, `marketing_env_not_ready`
+  - 확인 필요 명령: `vercel link`, Vercel production env add, `vercel deploy --prod`
 - `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 미준비로 예상대로 미생성
   - 출력: `ok=false`
   - 파일 쓰기 없음
@@ -96,8 +115,8 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
-- `npm test`: 87개 테스트 통과
-- `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트, production runtime QA 스크립트 문법 검사 통과
+- `npm test`: 91개 테스트 통과
+- `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 배포 대상 점검기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트, production runtime QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
 - `npm run verify:browser`: headless Chrome에서 데모 autorun 통과
@@ -176,6 +195,7 @@ npm run stop:local
 - 운영 환경값 readiness 검증 명령: `npm run validate:env -- /path/to/store`
 - 전체 로컬/사이트 QA 오케스트레이터 명령: `npm run full:qa -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - production runtime QA 명령: `npm run verify:prod-site -- --site-root /path/to/store --build --event-probe`
+- 배포 대상 점검 명령: `npm run inspect:deployment -- --site-root /path/to/store`
 - 운영 전환 일괄 실행 명령: `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env`
 - 운영 상태 일괄 갱신 명령: `npm run ops:refresh -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - 운영 계정값 handoff 문서 생성 명령: `npm run handoff:deployment -- --site-root /path/to/store`
