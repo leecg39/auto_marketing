@@ -323,6 +323,18 @@ async function verifyVercelProduction(options) {
     return { url, http_status: response.status, title: titleOf(text) };
   }));
 
+  checks.push(await runCheck('external_setup_page', async () => {
+    const url = joinUrl(options.baseUrl, '/external-setup');
+    const { response, text } = await fetchBody(url);
+
+    assert(response.status === 200, `External setup returned ${response.status}`);
+    assert(titleOf(text) === 'External Account Setup', `External setup title mismatch: ${titleOf(text)}`);
+    assert(text.includes('oliveyoung-shopee-web을 실제 생성합니다'), 'External setup page is missing GTM action-time prompt');
+    assert(text.includes('실행 전 확인 필요'), 'External setup page is missing confirmation gate label');
+
+    return { url, http_status: response.status, title: titleOf(text) };
+  }));
+
   checks.push(await runCheck('api_health', async () => {
     const url = joinUrl(options.baseUrl, '/api/crm/events');
     const { response, json } = await fetchBody(url);

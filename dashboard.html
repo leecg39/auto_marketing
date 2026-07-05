@@ -77,6 +77,12 @@
         text-decoration: none;
       }
 
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -167,7 +173,10 @@
         <h1>Marketing Automation Dashboard</h1>
         <p>production 배포 표면에서 확인하는 실행 상태</p>
       </div>
-      <a href="/">홈</a>
+      <nav class="actions" aria-label="주요 링크">
+        <a href="/">홈</a>
+        <a href="/external-setup">외부 계정 체크리스트</a>
+      </nav>
     </header>
 
     <main>
@@ -178,9 +187,9 @@
           <p>SDK, CRM 이벤트 API, GTM 구성, 배포 점검 스크립트가 자동 테스트로 검증되었습니다.</p>
         </article>
         <article class="panel">
-          <span class="metric info">4</span>
+          <span class="metric info">5</span>
           <h2>Production routes</h2>
-          <p>루트, 데모, 대시보드, CRM 이벤트 API가 Vercel production에서 노출됩니다.</p>
+          <p>루트, 데모, 대시보드, 외부 계정 체크리스트, CRM 이벤트 API가 Vercel production에서 노출됩니다.</p>
         </article>
         <article class="panel">
           <span id="env-missing-count" class="metric pending">...</span>

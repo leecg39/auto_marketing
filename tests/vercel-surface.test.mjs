@@ -200,15 +200,20 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   const vercelConfig = JSON.parse(await readFile(path.join(kitRoot, 'vercel.json'), 'utf8'));
   const index = await readFile(path.join(kitRoot, 'index.html'), 'utf8');
   const dashboard = await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8');
+  const externalSetup = await readFile(path.join(kitRoot, 'external-setup.html'), 'utf8');
   const rewrites = new Map(vercelConfig.rewrites.map((rewrite) => [rewrite.source, rewrite.destination]));
 
   assert.equal(rewrites.get('/demo'), '/examples/demo-store.html');
   assert.equal(rewrites.get('/dashboard'), '/dashboard.html');
+  assert.equal(rewrites.get('/external-setup'), '/external-setup.html');
   assert.match(index, /href="\/demo\?crm=\/api\/crm\/events&autorun=1"/);
+  assert.match(index, /href="\/external-setup"/);
   assert.match(index, /id="probe" type="button"/);
   assert.match(dashboard, /Marketing Automation Dashboard/);
   assert.match(dashboard, /id="env-next-actions"/);
   assert.match(dashboard, /실행 전 확인 필요/);
+  assert.match(externalSetup, /External Account Setup/);
+  assert.match(externalSetup, /oliveyoung-shopee-web을 실제 생성합니다/);
 });
 
 test('Vercel production verifier parses arguments and demo URL', () => {

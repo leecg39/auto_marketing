@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>External Account Setup</title>
+    <style>
+      :root {
+        --ink: #16181d;
+        --muted: #5d6670;
+        --line: #d9dde3;
+        --surface: #ffffff;
+        --wash: #f5f7f8;
+        --green: #0f766e;
+        --blue: #2563eb;
+        --amber: #b45309;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--wash);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+
+      header,
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 28px 0 18px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 18px;
+      }
+
+      h3 {
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 16px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .panel,
+      .task {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+      }
+
+      .metric {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 30px;
+        font-weight: 700;
+      }
+
+      .pending {
+        color: var(--amber);
+      }
+
+      .ok {
+        color: var(--green);
+      }
+
+      .task-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .task {
+        display: grid;
+        gap: 10px;
+      }
+
+      .task[data-active="false"] {
+        opacity: 0.58;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        border-radius: 999px;
+        padding: 0 10px;
+        background: #eef2ff;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .gate {
+        background: #fff7ed;
+        color: var(--amber);
+      }
+
+      .prompt {
+        border-left: 3px solid var(--amber);
+        padding-left: 12px;
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      @media (max-width: 860px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>External Account Setup</h1>
+        <p>외부 계정값 확보와 실행 직전 확인 문구</p>
+      </div>
+      <nav class="nav" aria-label="주요 링크">
+        <a href="/">홈</a>
+        <a href="/dashboard">운영 대시보드</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="grid" aria-label="현재 상태">
+        <article class="panel">
+          <span id="remaining-count" class="metric pending">...</span>
+          <h2>남은 외부 작업</h2>
+          <p id="summary">운영 env readiness를 확인 중입니다.</p>
+        </article>
+        <article class="panel">
+          <h2>현재 차단값</h2>
+          <ul id="missing-list">
+            <li>확인 중</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="task-list" id="task-list" aria-label="외부 계정 작업"></section>
+    </main>
+
+    <script>
+      var TASKS = [
+        {
+          id: 'gtm_container',
+          title: 'GTM 웹 컨테이너 생성',
+          owner: 'Google Tag Manager',
+          keys: ['NEXT_PUBLIC_GTM_ID'],
+          confirmationRequired: true,
+          prompt: 'GTM에서 Google 계정 leecg2908@gmail.com에 계정 oliveyoung-shopee, 웹 컨테이너 oliveyoung-shopee-web을 실제 생성합니다. 이 Google 계정 리소스를 만들기 위해 만들기를 눌러도 될까요?',
+          evidence: ['GTM-... 컨테이너 ID', 'GTM Preview 이벤트 확인', '게시 버전 기록']
+        },
+        {
+          id: 'ga4_stream',
+          title: 'GA4 속성 및 웹 스트림 생성',
+          owner: 'Google Analytics',
+          keys: ['NEXT_PUBLIC_GA4_MEASUREMENT_ID'],
+          confirmationRequired: true,
+          prompt: 'Google Analytics에서 leecg2908@gmail.com 계정에 GA4 속성 또는 웹 데이터 스트림을 실제 생성합니다. 이 Analytics 리소스를 만들기 위해 생성/저장을 눌러도 될까요?',
+          evidence: ['G-... 측정 ID', 'DebugView 이벤트 수신', 'purchase 값 확인']
+        },
+        {
+          id: 'google_ads_purchase',
+          title: 'Google Ads 구매 전환 액션 생성',
+          owner: 'Google Ads',
+          keys: ['NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL'],
+          confirmationRequired: true,
+          prompt: 'Google Ads 계정 446-442-5600에서 구매 전환 액션을 실제 생성하거나 수정합니다. 광고 계정 설정을 바꾸기 위해 저장을 눌러도 될까요?',
+          evidence: ['구매 전환 label', '테스트 구매 전환 수신 결과']
+        },
+        {
+          id: 'meta_pixel',
+          title: 'Meta 데이터 세트/픽셀 생성',
+          owner: 'Meta Events Manager',
+          keys: ['NEXT_PUBLIC_META_PIXEL_ID'],
+          confirmationRequired: true,
+          prompt: 'Meta Business에서 데이터 세트 또는 Pixel을 실제 생성하거나 도메인 검증 설정을 저장합니다. Meta 계정 상태를 바꾸기 위해 생성/저장을 눌러도 될까요?',
+          evidence: ['Meta Pixel ID', '테스트 이벤트 수신 결과', '도메인 검증 상태']
+        },
+        {
+          id: 'crm_delivery',
+          title: '이메일/카카오/CRM webhook 연결',
+          owner: 'CRM or messaging provider',
+          keys: ['DOWNSTREAM_CRM_WEBHOOK_URL'],
+          confirmationRequired: true,
+          prompt: '고객 연락처와 마케팅 이벤트를 이메일/카카오/CRM 공급자 webhook으로 전송할 수 있는 설정을 실제 저장하거나 테스트 발송합니다. 테스트 계정으로만 진행해도 될까요?',
+          evidence: ['https webhook URL', '테스트 계정 발송 성공 로그', '미동의 계정 미발송 결과']
+        }
+      ];
+
+      function setText(id, text) {
+        var target = document.getElementById(id);
+        if (target) {
+          target.textContent = text;
+        }
+      }
+
+      function renderList(id, items) {
+        var target = document.getElementById(id);
+        var empty;
+        if (!target) {
+          return;
+        }
+        target.innerHTML = '';
+        if (!items.length) {
+          empty = document.createElement('li');
+          empty.textContent = '없음';
+          target.appendChild(empty);
+          return;
+        }
+        items.forEach(function (item) {
+          var li = document.createElement('li');
+          var code = document.createElement('code');
+          code.textContent = item;
+          li.appendChild(code);
+          target.appendChild(li);
+        });
+      }
+
+      function renderTasks(missing) {
+        var target = document.getElementById('task-list');
+        if (!target) {
+          return;
+        }
+
+        target.innerHTML = '';
+        TASKS.forEach(function (task) {
+          var active = task.keys.some(function (key) {
+            return missing.includes(key);
+          });
+          var article = document.createElement('article');
+          var title = document.createElement('h2');
+          var meta = document.createElement('div');
+          var owner = document.createElement('span');
+          var gate = document.createElement('span');
+          var prompt = document.createElement('p');
+          var evidence = document.createElement('ul');
+
+          article.className = 'task';
+          article.setAttribute('data-active', String(active));
+          title.textContent = task.title;
+          meta.className = 'meta';
+          owner.className = 'badge';
+          owner.textContent = task.owner;
+          gate.className = task.confirmationRequired ? 'badge gate' : 'badge';
+          gate.textContent = task.confirmationRequired ? '실행 전 확인 필요' : '확인 불필요';
+          prompt.className = 'prompt';
+          prompt.textContent = task.prompt;
+
+          task.evidence.forEach(function (item) {
+            var li = document.createElement('li');
+            li.textContent = item;
+            evidence.appendChild(li);
+          });
+
+          meta.appendChild(owner);
+          meta.appendChild(gate);
+          article.appendChild(title);
+          article.appendChild(meta);
+          article.appendChild(prompt);
+          article.appendChild(evidence);
+          target.appendChild(article);
+        });
+      }
+
+      fetch('/api/marketing/env-status', { headers: { Accept: 'application/json' } })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (status) {
+          var missing = status.summary && Array.isArray(status.summary.missing) ? status.summary.missing : [];
+          var placeholders = status.summary && Array.isArray(status.summary.placeholders) ? status.summary.placeholders : [];
+          var invalid = status.summary && Array.isArray(status.summary.invalid) ? status.summary.invalid : [];
+          var remaining = missing.concat(placeholders, invalid);
+
+          setText('remaining-count', String(remaining.length));
+          setText('summary', status.ready ? '운영 env 값이 준비되었습니다.' : '외부 계정값과 테스트 증거가 아직 남아 있습니다.');
+          renderList('missing-list', remaining);
+          renderTasks(remaining);
+        })
+        .catch(function () {
+          setText('remaining-count', '!');
+          setText('summary', '운영 env readiness API를 읽지 못했습니다.');
+          renderList('missing-list', ['env_status_api_failed']);
+          renderTasks([]);
+        });
+    </script>
+  </body>
+</html>

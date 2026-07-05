@@ -18,6 +18,7 @@
 - Vercel production URL 확인: `https://auto-marketing-sigma.vercel.app/`
 - Vercel production demo 확인: `https://auto-marketing-sigma.vercel.app/demo?crm=/api/crm/events&autorun=1`
 - Vercel production dashboard 확인: `https://auto-marketing-sigma.vercel.app/dashboard`
+- Vercel production external setup 확인: `https://auto-marketing-sigma.vercel.app/external-setup`
 - Vercel serverless CRM API 확인: `https://auto-marketing-sigma.vercel.app/api/crm/events`
 - Vercel production env readiness API 확인: `https://auto-marketing-sigma.vercel.app/api/marketing/env-status`
 - Vercel `petasos/auto-marketing` production env 확정값 반영:
@@ -56,6 +57,7 @@
 - 외부 계정 실행 체크리스트 보강:
   - `npm run handoff:external -- --site-root /path/to/applied-store` 산출물에 `Action-time 확인 문구` 추가
   - GTM, GA4, Google Ads, Meta, CRM delivery 작업별 즉시 사용할 확인 질문을 JSON/Markdown에 포함
+  - Vercel production 정적 라우트 `/external-setup`에서 같은 확인 문구를 확인 가능
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -118,6 +120,7 @@ npm run validate:env -- /path/to/applied-store
   - `/`: `200`, title `Marketing Automation Kit`
   - `/demo?crm=/api/crm/events&autorun=1`: `200`, 브라우저 autorun 결과 `ok:true`
   - `/dashboard`: `200`, title `Marketing Automation Dashboard`
+  - `/external-setup`: `200`, title `External Account Setup`
   - `/api/crm/events` GET: `{"ok":true,"service":"marketing-automation-crm-events"}`
   - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
   - `/api/marketing/env-status` GET: `200`, production env readiness 요약 반환, 원본 env 값 미노출
@@ -125,8 +128,8 @@ npm run validate:env -- /path/to/applied-store
   - `/dashboard` headless Chrome DOM: 외부 계정 액션에 `실행 전 확인 필요` 라벨 렌더링 확인
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`: Vercel production 자동 검증 통과
   - 리포트: `dist/vercel-production-report.json`
-  - 요약: `passed=7`, `failed=0`
-  - 체크: root page, dashboard page, API health, env readiness, purchase flow, consent gate, demo browser autorun
+  - 요약: `passed=8`, `failed=0`
+  - 체크: root page, dashboard page, external setup page, API health, env readiness, purchase flow, consent gate, demo browser autorun
   - env readiness next actions: `gtm_container`, `ga4_stream`, `google_ads_purchase`, `meta_pixel`, `crm_downstream`
   - browser autorun: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, 구매 중복 방지, dataLayer PII 미포함 확인
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready`: 운영 env 값 미준비 상태에서는 실패하도록 설계됨
