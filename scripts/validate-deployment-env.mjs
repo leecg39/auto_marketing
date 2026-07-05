@@ -337,4 +337,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   await main();
 }
 
-export { REQUIREMENTS, classifyUrl, discoverStorefrontUrls, parseDotenv, validateDeploymentEnv };
+export {
+  REQUIREMENTS,
+  classifyRequirement,
+  classifyUrl,
+  discoverStorefrontUrls,
+  parseDotenv,
+  summarize,
+  validateDeploymentEnv
+};

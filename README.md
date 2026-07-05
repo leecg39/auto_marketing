@@ -20,7 +20,7 @@
 - `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 - `scripts/refresh-ops-status.mjs`: full QA, handoff, 완료 감사, 운영 대시보드를 한 번에 갱신하는 오케스트레이터
 - `scripts/verify-vercel-production.mjs`: Vercel production 루트/데모/대시보드/API와 브라우저 autorun 검증기
-- `index.html`, `api/crm/events.js`, `vercel.json`: Vercel production URL에서 바로 열리는 데모/대시보드/CRM 이벤트 API 표면
+- `index.html`, `api/crm/events.js`, `api/marketing/env-status.js`, `vercel.json`: Vercel production URL에서 바로 열리는 데모/대시보드/CRM 이벤트 API/env readiness 표면
 
 ## 1. 사이트 공통 레이아웃에 SDK 추가
 
@@ -77,6 +77,7 @@ npm run verify:site -- --site-url http://127.0.0.1:3000
 npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app
+npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready
 npm run inspect:deployment -- --site-root /path/to/your-store
 npm run inspect:deployment -- --site-root /path/to/your-store --vercel-project-url https://vercel.com/team/project
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv

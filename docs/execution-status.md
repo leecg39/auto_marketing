@@ -19,6 +19,7 @@
 - Vercel production demo 확인: `https://auto-marketing-sigma.vercel.app/demo?crm=/api/crm/events&autorun=1`
 - Vercel production dashboard 확인: `https://auto-marketing-sigma.vercel.app/dashboard`
 - Vercel serverless CRM API 확인: `https://auto-marketing-sigma.vercel.app/api/crm/events`
+- Vercel production env readiness API 확인: `https://auto-marketing-sigma.vercel.app/api/marketing/env-status`
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -51,6 +52,7 @@ npm run verify:site -- --site-url http://127.0.0.1:3100
 npm run verify:site -- --site-url http://127.0.0.1:3100 --event-probe
 npm run verify:prod-site -- --site-root /path/to/applied-store --site-port 3101 --timeout-ms 240000 --build --event-probe
 npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app
+npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready
 npm run verify:gtm
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 npm run generate:gtm -- --public-id GTM-XXXXXXX
@@ -81,11 +83,13 @@ npm run validate:env -- /path/to/applied-store
   - `/dashboard`: `200`, title `Marketing Automation Dashboard`
   - `/api/crm/events` GET: `{"ok":true,"service":"marketing-automation-crm-events"}`
   - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
+  - `/api/marketing/env-status` GET: `200`, production env readiness 요약 반환, 원본 env 값 미노출
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`: Vercel production 자동 검증 통과
   - 리포트: `dist/vercel-production-report.json`
-  - 요약: `passed=6`, `failed=0`
-  - 체크: root page, dashboard page, API health, purchase flow, consent gate, demo browser autorun
+  - 요약: `passed=7`, `failed=0`
+  - 체크: root page, dashboard page, API health, env readiness, purchase flow, consent gate, demo browser autorun
   - browser autorun: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, 구매 중복 방지, dataLayer PII 미포함 확인
+- `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready`: 운영 env 값 미준비 상태에서는 실패하도록 설계됨
 - `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`

@@ -65,7 +65,8 @@ function parseArgs(args) {
     baseUrl: DEFAULT_BASE_URL,
     report: DEFAULT_REPORT,
     browser: true,
-    timeoutMs: 22000
+    timeoutMs: 22000,
+    requireEnvReady: false
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -86,6 +87,10 @@ function parseArgs(args) {
     }
     if (key === 'skip-browser') {
       parsed.browser = false;
+      continue;
+    }
+    if (key === 'require-env-ready') {
+      parsed.requireEnvReady = true;
       continue;
     }
 
@@ -329,6 +334,27 @@ async function verifyVercelProduction(options) {
     return { url, http_status: response.status, service: json.service };
   }));
 
+  checks.push(await runCheck('env_readiness', async () => {
+    const url = joinUrl(options.baseUrl, '/api/marketing/env-status');
+    const { response, json } = await fetchBody(url);
+
+    assert(response.status === 200, `Env readiness returned ${response.status}`);
+    assert(json?.ok === true, 'Env readiness body is not ok');
+    assert(Array.isArray(json.checks), 'Env readiness checks are missing');
+    assert(json.summary && typeof json.summary.ready === 'boolean', 'Env readiness summary is missing');
+
+    if (options.requireEnvReady) {
+      assert(json.ready === true, `Env readiness failed: ${JSON.stringify(json.summary)}`);
+    }
+
+    return {
+      url,
+      http_status: response.status,
+      ready: json.ready,
+      summary: json.summary
+    };
+  }));
+
   checks.push(await runCheck('api_purchase_flow', async () => {
     const url = joinUrl(options.baseUrl, '/api/crm/events');
     const { response, json } = await fetchBody(url, {
@@ -407,6 +433,7 @@ async function verifyVercelProduction(options) {
     generated_at: new Date().toISOString(),
     base_url: options.baseUrl,
     browser: options.browser,
+    require_env_ready: options.requireEnvReady,
     summary: {
       passed: checks.length - failed.length,
       failed: failed.length
@@ -423,6 +450,7 @@ function usage() {
     'Options:',
     '  --base-url URL      Production deployment URL. Default: VERCEL_PRODUCTION_URL or auto-marketing-sigma.vercel.app',
     '  --skip-browser      Verify HTTP/API checks only.',
+    '  --require-env-ready Fail when production GTM/GA4/ads/CRM env values are not ready.',
     '  --chrome-bin PATH   Chrome executable for browser autorun QA.',
     '  --timeout-ms N      Browser timeout in ms. Default: 22000',
     '  --report FILE       JSON report output. Default: dist/vercel-production-report.json'

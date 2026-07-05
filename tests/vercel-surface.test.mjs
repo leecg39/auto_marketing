@@ -14,8 +14,19 @@ import {
 } from '../scripts/verify-vercel-production.mjs';
 
 const require = createRequire(import.meta.url);
-const handler = require('../api/crm/events.js');
+const crmHandler = require('../api/crm/events.js');
+const envStatusHandler = require('../api/marketing/env-status.js');
 const kitRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ENV_KEYS = [
+  'NEXT_PUBLIC_GTM_ID',
+  'NEXT_PUBLIC_CRM_WEBHOOK_URL',
+  'NEXT_PUBLIC_APP_URL',
+  'DOWNSTREAM_CRM_WEBHOOK_URL',
+  'NEXT_PUBLIC_GA4_MEASUREMENT_ID',
+  'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID',
+  'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
+  'NEXT_PUBLIC_META_PIXEL_ID'
+];
 
 class MockRequest extends Readable {
   constructor(method, body = '') {
@@ -58,7 +69,7 @@ class MockResponse {
   }
 }
 
-async function invoke(method, payload) {
+async function invoke(handler, method, payload) {
   const request = new MockRequest(method, payload === undefined ? '' : JSON.stringify(payload));
   const response = new MockResponse();
 
@@ -72,7 +83,7 @@ async function invoke(method, payload) {
 }
 
 test('Vercel CRM event API returns automation actions for production demo events', async () => {
-  const result = await invoke('POST', {
+  const result = await invoke(crmHandler, 'POST', {
     event_name: 'purchase',
     occurred_at: '2026-07-05T00:00:00.000Z',
     transaction_id: 'ORDER_VERCEL_001',
@@ -96,7 +107,7 @@ test('Vercel CRM event API returns automation actions for production demo events
 });
 
 test('Vercel CRM event API rejects contact payloads without marketing consent', async () => {
-  const result = await invoke('POST', {
+  const result = await invoke(crmHandler, 'POST', {
     event_name: 'generate_lead',
     occurred_at: '2026-07-05T00:00:00.000Z',
     email: 'demo@example.test',
@@ -106,6 +117,68 @@ test('Vercel CRM event API rejects contact payloads without marketing consent', 
   assert.equal(result.status, 422);
   assert.equal(result.body.ok, false);
   assert.equal(result.body.errors.includes('marketing_consent_required_for_contact_payload'), true);
+});
+
+test('Vercel env readiness API reports ready state without exposing raw values', async () => {
+  const previous = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
+
+  try {
+    Object.assign(process.env, {
+      NEXT_PUBLIC_GTM_ID: 'GTM-ABCDE12',
+      NEXT_PUBLIC_CRM_WEBHOOK_URL: '/api/crm/events',
+      NEXT_PUBLIC_APP_URL: 'https://auto-marketing-sigma.vercel.app',
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://crm.example.test/webhook',
+      NEXT_PUBLIC_GA4_MEASUREMENT_ID: 'G-ABCDE12345',
+      NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: 'AW-123456789',
+      NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: 'purchaseLabel123',
+      NEXT_PUBLIC_META_PIXEL_ID: '123456789'
+    });
+
+    const result = await invoke(envStatusHandler, 'GET');
+    const serialized = JSON.stringify(result.body);
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.ok, true);
+    assert.equal(result.body.ready, true);
+    assert.equal(result.body.summary.ready, true);
+    assert.equal(serialized.includes('crm.example.test'), false);
+    assert.equal(serialized.includes('purchaseLabel123'), false);
+    assert.equal(result.body.checks.every((check) => check.status === 'ready'), true);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+});
+
+test('Vercel env readiness API reports missing runtime values', async () => {
+  const previous = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
+
+  try {
+    for (const key of ENV_KEYS) {
+      delete process.env[key];
+    }
+
+    const result = await invoke(envStatusHandler, 'GET');
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.ok, true);
+    assert.equal(result.body.ready, false);
+    assert.equal(result.body.summary.missing.includes('NEXT_PUBLIC_GTM_ID'), true);
+    assert.equal(result.body.summary.missing.includes('DOWNSTREAM_CRM_WEBHOOK_URL'), true);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 });
 
 test('Vercel static surface exposes the demo and dashboard routes', async () => {
@@ -125,6 +198,7 @@ test('Vercel production verifier parses arguments and demo URL', () => {
     '--base-url',
     'https://auto-marketing-sigma.vercel.app/',
     '--skip-browser',
+    '--require-env-ready',
     '--timeout-ms',
     '1000',
     '--report',
@@ -133,6 +207,7 @@ test('Vercel production verifier parses arguments and demo URL', () => {
 
   assert.equal(parsed.baseUrl, 'https://auto-marketing-sigma.vercel.app');
   assert.equal(parsed.browser, false);
+  assert.equal(parsed.requireEnvReady, true);
   assert.equal(parsed.timeoutMs, 1000);
   assert.equal(parsed.report, '/tmp/vercel-report.json');
   assert.equal(
