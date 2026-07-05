@@ -15,6 +15,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const crmHandler = require('../api/crm/events.js');
+const clientConfigHandler = require('../api/marketing/client-config.js');
 const envStatusHandler = require('../api/marketing/env-status.js');
 const kitRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ENV_KEYS = [
@@ -79,6 +80,19 @@ async function invoke(handler, method, payload) {
     status: response.statusCode,
     headers: response.headers,
     body: response.json()
+  };
+}
+
+async function invokeRaw(handler, method, payload) {
+  const request = new MockRequest(method, payload === undefined ? '' : JSON.stringify(payload));
+  const response = new MockResponse();
+
+  await handler(request, response);
+
+  return {
+    status: response.statusCode,
+    headers: response.headers,
+    body: response.body
   };
 }
 
@@ -196,9 +210,49 @@ test('Vercel env readiness API reports missing runtime values', async () => {
   }
 });
 
+test('Vercel client config API exposes only browser-safe runtime values', async () => {
+  const previous = Object.fromEntries(ENV_KEYS.concat([
+    'NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY'
+  ]).map((key) => [key, process.env[key]]));
+
+  try {
+    Object.assign(process.env, {
+      NEXT_PUBLIC_GTM_ID: 'GTM-ABCDE12',
+      NEXT_PUBLIC_GA4_MEASUREMENT_ID: 'G-ABCDE12345',
+      NEXT_PUBLIC_CRM_WEBHOOK_URL: '/api/crm/events',
+      NEXT_PUBLIC_APP_URL: 'https://auto-marketing-sigma.vercel.app',
+      NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY: 'KRW',
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://crm.example.test/webhook'
+    });
+
+    const result = await invokeRaw(clientConfigHandler, 'GET');
+    const assignment = result.body.match(/window\.__MARKETING_AUTOMATION_CONFIG__ = (.*);\n$/);
+    const config = JSON.parse(assignment[1]);
+
+    assert.equal(result.status, 200);
+    assert.match(result.headers['content-type'], /application\/javascript/);
+    assert.equal(config.gtmId, 'GTM-ABCDE12');
+    assert.equal(config.ga4MeasurementId, 'G-ABCDE12345');
+    assert.equal(config.crmWebhookUrl, '/api/crm/events');
+    assert.equal(config.appUrl, 'https://auto-marketing-sigma.vercel.app');
+    assert.equal(config.defaultCurrency, 'KRW');
+    assert.equal(result.body.includes('crm.example.test'), false);
+    assert.equal(result.body.includes('DOWNSTREAM_CRM_WEBHOOK_URL'), false);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+});
+
 test('Vercel static surface exposes the demo and dashboard routes', async () => {
   const vercelConfig = JSON.parse(await readFile(path.join(kitRoot, 'vercel.json'), 'utf8'));
   const index = await readFile(path.join(kitRoot, 'index.html'), 'utf8');
+  const demo = await readFile(path.join(kitRoot, 'examples', 'demo-store.html'), 'utf8');
   const dashboard = await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8');
   const externalSetup = await readFile(path.join(kitRoot, 'external-setup.html'), 'utf8');
   const rewrites = new Map(vercelConfig.rewrites.map((rewrite) => [rewrite.source, rewrite.destination]));
@@ -209,11 +263,17 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   assert.match(index, /href="\/demo\?crm=\/api\/crm\/events&autorun=1"/);
   assert.match(index, /href="\/external-setup"/);
   assert.match(index, /id="probe" type="button"/);
+  assert.match(index, /src="\/api\/marketing\/client-config\.js"/);
+  assert.match(index, /src="\/src\/marketing-runtime\.js"/);
+  assert.match(demo, /src="\/api\/marketing\/client-config\.js"/);
+  assert.match(demo, /runtimeConfig\.gtmId/);
   assert.match(dashboard, /Marketing Automation Dashboard/);
   assert.match(dashboard, /id="env-next-actions"/);
   assert.match(dashboard, /실행 전 확인 필요/);
+  assert.match(dashboard, /src="\/src\/marketing-runtime\.js"/);
   assert.match(externalSetup, /External Account Setup/);
   assert.match(externalSetup, /oliveyoung-shopee-web을 실제 생성합니다/);
+  assert.match(externalSetup, /src="\/src\/marketing-runtime\.js"/);
 });
 
 test('Vercel production verifier parses arguments and demo URL', () => {

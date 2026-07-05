@@ -72,12 +72,12 @@
         <h1>자사몰 마케팅 자동화 데모</h1>
         <p>버튼을 눌러 GA4 dataLayer 이벤트와 CRM 웹훅 페이로드를 확인합니다.</p>
         <div class="grid">
-          <button id="consent">동의 허용</button>
-          <button id="view" class="secondary">상품 조회</button>
-          <button id="cart" class="secondary">장바구니</button>
-          <button id="checkout" class="secondary">결제 시작</button>
-          <button id="purchase" class="secondary">구매 완료</button>
-          <button id="lead" class="secondary">리드 생성</button>
+          <button id="consent" type="button">동의 허용</button>
+          <button id="view" type="button" class="secondary">상품 조회</button>
+          <button id="cart" type="button" class="secondary">장바구니</button>
+          <button id="checkout" type="button" class="secondary">결제 시작</button>
+          <button id="purchase" type="button" class="secondary">구매 완료</button>
+          <button id="lead" type="button" class="secondary">리드 생성</button>
         </div>
         <div id="status">최근 이벤트: 초기화</div>
         <div id="qa-result" data-ok="pending">QA: 대기</div>
@@ -87,6 +87,7 @@
     </main>
 
     <script src="../src/marketing-automation.js"></script>
+    <script src="/api/marketing/client-config.js"></script>
     <script>
       var product = {
         item_id: 'SKU_001',
@@ -97,18 +98,21 @@
       };
 
       var params = new URLSearchParams(window.location.search);
-      var crmWebhookUrl = params.get('crm') || 'http://localhost:8787/crm/events';
-      var gtmId = params.get('gtm') || '';
+      var runtimeConfig = window.__MARKETING_AUTOMATION_CONFIG__ || {};
+      var crmWebhookUrl = params.get('crm') || runtimeConfig.crmWebhookUrl || 'http://localhost:8787/crm/events';
+      var gtmId = params.get('gtm') || runtimeConfig.gtmId || '';
+      var defaultCurrency = params.get('currency') || runtimeConfig.defaultCurrency || 'KRW';
 
       MarketingAutomation.init({
         gtmId: gtmId,
         crmWebhookUrl: crmWebhookUrl,
-        defaultCurrency: 'KRW',
+        defaultCurrency: defaultCurrency,
         autoSendCrm: false
       });
 
       function lastDataLayerEvent() {
-        for (var index = window.dataLayer.length - 1; index >= 0; index -= 1) {
+        var index;
+        for (index = window.dataLayer.length - 1; index >= 0; index -= 1) {
           if (window.dataLayer[index] && window.dataLayer[index].event) {
             return window.dataLayer[index].event;
           }
