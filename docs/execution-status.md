@@ -30,7 +30,7 @@
   - env 3개 반영 deployment: `dpl_3enpokm8WGy4UYhX9ucJhgyrAXyH`
   - Google Ads conversion ID 반영 deployment: `dpl_8MkfXoGgeCk1taUoqrZpehXFozAu`
   - env readiness `next_actions` 반영 deployment: `dpl_CHcRbN9tR3kPs9zFipguGf9i98Na`
-  - 최신 deployment URL: `https://auto-marketing-estq4q908-petasos.vercel.app`
+  - env readiness 검증 deployment URL: `https://auto-marketing-estq4q908-petasos.vercel.app`
   - production alias: `https://auto-marketing-sigma.vercel.app`
   - 상태: `READY`
 - Vercel production env readiness 현재 남은 외부값:
