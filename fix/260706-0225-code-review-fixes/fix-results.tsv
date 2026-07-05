@@ -1,0 +1,6 @@
+id	type	priority	file	line	title	status	guard	attempts	antipattern	commit
+FIX-001	bug	2	server/crm-event-receiver.mjs,api/crm/events.js	85,94	Downstream delivery failure crashes CRM receiver (unhandled rejection)	fixed	pass	1	none	b2578db
+FIX-002	bug	2	src/marketing-automation.js	216	Malformed query string encoding crashes MarketingAutomation.init()	fixed	pass	1	none	09ebb6e
+FIX-003	bug	5	scripts/reconcile-revenue.mjs	173	normalizeDate fallback shifts day via UTC conversion in UTC+ timezones	fixed	pass	1	none	b638198
+FIX-004	bug	5	src/marketing-automation.js	116	localStorage access throw bypasses in-memory storage fallback	fixed	pass	1	none	b6ab521
+BLK-001	security	2	server/crm-event-receiver.mjs,api/crm/events.js	-	Unauthenticated CRM endpoint + CORS * (needs product decision on auth scheme)	blocked	-	0	-	-
