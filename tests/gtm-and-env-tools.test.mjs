@@ -11,6 +11,7 @@ import { buildContainerImport } from '../scripts/generate-gtm-import.mjs';
 import {
   classifyUrl,
   discoverStorefrontUrls,
+  parseArgs,
   parseDotenv,
   validateDeploymentEnv
 } from '../scripts/validate-deployment-env.mjs';
@@ -61,6 +62,19 @@ test('parses dotenv values without quotes', () => {
     B: 'two',
     C: 'three'
   });
+});
+
+test('parses deployment env validator CLI arguments', () => {
+  const parsed = parseArgs([
+    '/tmp/store',
+    '--env-file',
+    '/tmp/marketing-production.env',
+    '--strict'
+  ]);
+
+  assert.equal(parsed.root, '/tmp/store');
+  assert.deepEqual(parsed.envFiles, ['/tmp/marketing-production.env']);
+  assert.equal(parsed.strict, true);
 });
 
 test('deployment env validator reports ready only for real-looking IDs', async () => {
@@ -187,6 +201,40 @@ test('deployment env validator CLI prints readiness JSON', async () => {
 
     assert.equal(report.ready, false);
     assert.equal(report.summary.placeholders.includes('NEXT_PUBLIC_GTM_ID'), true);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('deployment env validator CLI reads an explicit env file', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-file-'));
+  const envFile = path.join(tmp, 'candidate.env');
+
+  try {
+    await writeFile(envFile, [
+      'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=https://store.example.test',
+      'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCD123456',
+      'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+      ''
+    ].join('\n'));
+
+    const { stdout } = await execFileAsync(process.execPath, [
+      fileURLToPath(new URL('../scripts/validate-deployment-env.mjs', import.meta.url)),
+      tmp,
+      '--env-file',
+      envFile
+    ]);
+    const report = JSON.parse(stdout);
+
+    assert.equal(report.ready, false);
+    assert.deepEqual(report.loaded_env_files, [envFile]);
+    assert.deepEqual(report.summary.missing, [
+      'DOWNSTREAM_CRM_WEBHOOK_URL',
+      'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
+      'NEXT_PUBLIC_META_PIXEL_ID'
+    ]);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

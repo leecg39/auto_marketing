@@ -212,6 +212,10 @@ function renderBullets(items) {
   return items.map((item) => `- ${item}`).join('\n');
 }
 
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
 function renderDiscoveredUrls(task) {
   if (!Array.isArray(task.discovered_urls)) {
     return '';
@@ -240,6 +244,9 @@ function renderMarkdown(report) {
   const blocking = report.plan.blocking_keys.length
     ? report.plan.blocking_keys.map((key) => `\`${key}\``).join(', ')
     : '없음';
+  const envFile = report.env_file || '/path/to/marketing-production.env';
+  const envFileArg = shellQuote(envFile);
+  const siteRootArg = shellQuote(report.site_root);
 
   const taskSections = report.plan.tasks.map((task, index) => [
     `## ${index + 1}. ${task.title}`,
@@ -271,6 +278,7 @@ function renderMarkdown(report) {
     '',
     `생성일: ${report.generated_at}`,
     `대상 사이트: \`${report.site_root}\``,
+    ...(report.env_file ? [`운영 env 파일: \`${report.env_file}\``] : []),
     `운영 env 준비: \`${report.plan.env_ready}\``,
     `현재 차단값: ${blocking}`,
     '',
@@ -285,21 +293,25 @@ function renderMarkdown(report) {
     '## 값을 받은 뒤 실행',
     '',
     '```bash',
-    'cp examples/marketing-production.env.example /path/to/marketing-production.env',
-    `npm run apply:env -- --site-root ${report.site_root} --env-file /path/to/marketing-production.env --dry-run`,
-    `npm run go:live -- --site-root ${report.site_root} --env-file /path/to/marketing-production.env`,
-    `npm run audit:completion -- --site-root ${report.site_root} --strict`,
+    report.env_file ? `# env file: ${envFile}` : 'cp examples/marketing-production.env.example /path/to/marketing-production.env',
+    `npm run apply:env -- --site-root ${siteRootArg} --env-file ${envFileArg} --dry-run`,
+    `npm run go:live -- --site-root ${siteRootArg} --env-file ${envFileArg}`,
+    `npm run audit:completion -- --site-root ${siteRootArg} --strict`,
     '```'
   ].join('\n');
 }
 
 async function generateExternalSetupPlan(options) {
   const siteRoot = path.resolve(options.siteRoot || process.cwd());
-  const env = await validateDeploymentEnv(siteRoot);
+  const envFile = options.envFile ? path.resolve(options.envFile) : '';
+  const env = await validateDeploymentEnv(siteRoot, {
+    envFiles: envFile ? [envFile] : undefined
+  });
   const plan = buildSetupPlan(env);
   const report = {
     generated_at: new Date().toISOString(),
     site_root: siteRoot,
+    env_file: envFile,
     env,
     plan
   };
@@ -345,6 +357,9 @@ function parseArgs(args) {
     if (key === 'json-output') {
       parsed.jsonOutput = path.resolve(value);
     }
+    if (key === 'env-file') {
+      parsed.envFile = path.resolve(value);
+    }
   }
 
   if (parsed.siteRoot) {
@@ -361,7 +376,8 @@ function usage() {
     '',
     'Options:',
     '  --output FILE       Markdown output. Default: dist/external-account-setup.md',
-    '  --json-output FILE  JSON output. Default: dist/external-account-setup.json'
+    '  --json-output FILE  JSON output. Default: dist/external-account-setup.json',
+    '  --env-file FILE     Read one explicit env file instead of the default site env files.'
   ].join('\n');
 }
 

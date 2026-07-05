@@ -135,6 +135,8 @@ handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/d
 ```bash
 cd marketing-automation-kit
 cp examples/marketing-production.env.example /path/to/marketing-production.env
+npm run validate:env -- /path/to/your-store --env-file /path/to/marketing-production.env
+npm run handoff:external -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run
 npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env
 npm run apply:env -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run

@@ -116,10 +116,10 @@ function parseDotenv(text) {
 }
 
 async function readEnvFile(root, fileName) {
-  const file = path.join(root, fileName);
+  const file = path.isAbsolute(fileName) ? fileName : path.join(root, fileName);
   try {
     return {
-      file: fileName,
+      file: path.isAbsolute(fileName) ? file : fileName,
       values: parseDotenv(await readFile(file, 'utf8'))
     };
   } catch {
@@ -301,7 +301,8 @@ function summarize(results) {
 }
 
 async function validateDeploymentEnv(root, options = {}) {
-  const env = await loadEnv(root, options.envFiles || DEFAULT_ENV_FILES);
+  const envFiles = options.envFile ? [options.envFile] : options.envFiles || DEFAULT_ENV_FILES;
+  const env = await loadEnv(root, envFiles);
   const results = REQUIREMENTS.map((requirement) => classifyRequirement(requirement, env.values));
   const summary = summarize(results);
   const urlDiscovery = await discoverStorefrontUrls(root, env.values);
@@ -319,16 +320,76 @@ async function validateDeploymentEnv(root, options = {}) {
   };
 }
 
+function parseArgs(args) {
+  const parsed = {
+    strict: false,
+    envFiles: []
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (!arg.startsWith('--')) {
+      parsed.root = parsed.root || arg;
+      continue;
+    }
+
+    const equalsIndex = arg.indexOf('=');
+    const key = equalsIndex >= 0 ? arg.slice(2, equalsIndex) : arg.slice(2);
+    const value = equalsIndex >= 0 ? arg.slice(equalsIndex + 1) : args[index + 1];
+
+    if (key === 'strict') {
+      parsed.strict = true;
+      continue;
+    }
+    if (key === 'help') {
+      parsed.help = true;
+      continue;
+    }
+
+    if (equalsIndex < 0) {
+      index += 1;
+    }
+
+    if (key === 'env-file') {
+      parsed.envFiles.push(value);
+    }
+  }
+
+  parsed.root = path.resolve(parsed.root || process.cwd());
+  if (!parsed.envFiles.length) {
+    delete parsed.envFiles;
+  }
+
+  return parsed;
+}
+
+function usage() {
+  return [
+    'Usage:',
+    '  npm run validate:env -- /path/to/store',
+    '  npm run validate:env -- /path/to/store --env-file /path/to/marketing-production.env',
+    '',
+    'Options:',
+    '  --env-file FILE  Read one explicit env file instead of the default site env files.',
+    '  --strict         Exit non-zero when required operating values are not ready.'
+  ].join('\n');
+}
+
 async function main() {
-  const args = process.argv.slice(2);
-  const strict = args.includes('--strict');
-  const rootArg = args.find((arg) => !arg.startsWith('--')) || process.cwd();
-  const root = path.resolve(rootArg);
-  const report = await validateDeploymentEnv(root);
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(usage());
+    return;
+  }
+
+  const report = await validateDeploymentEnv(options.root, {
+    envFiles: options.envFiles
+  });
 
   console.log(JSON.stringify(report, null, 2));
 
-  if (strict && !report.ready) {
+  if (options.strict && !report.ready) {
     process.exitCode = 1;
   }
 }
@@ -342,6 +403,7 @@ export {
   classifyRequirement,
   classifyUrl,
   discoverStorefrontUrls,
+  parseArgs,
   parseDotenv,
   summarize,
   validateDeploymentEnv

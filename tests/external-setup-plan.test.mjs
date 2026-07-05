@@ -23,12 +23,15 @@ test('parses external setup plan arguments', () => {
     '--output',
     '/tmp/external.md',
     '--json-output',
-    '/tmp/external.json'
+    '/tmp/external.json',
+    '--env-file',
+    '/tmp/marketing-production.env'
   ]);
 
   assert.equal(parsed.siteRoot, '/tmp/store');
   assert.equal(parsed.output, '/tmp/external.md');
   assert.equal(parsed.jsonOutput, '/tmp/external.json');
+  assert.equal(parsed.envFile, '/tmp/marketing-production.env');
 });
 
 test('builds setup tasks from deployment env status', () => {
@@ -116,6 +119,58 @@ test('external setup plan CLI writes markdown and JSON', async () => {
     assert.equal(markdown.includes('값을 받은 뒤 실행'), true);
     assert.equal(json.plan.tasks.some((task) => task.id === 'crm_delivery'), true);
     assert.equal(json.plan.tasks.find((task) => task.id === 'crm_delivery').confirmation_prompt.includes('테스트 계정으로만 진행'), true);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('external setup plan can use an explicit env file', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-external-env-file-'));
+  const siteRoot = path.join(tmp, 'store');
+  const envFile = path.join(tmp, 'candidate.env');
+  const output = path.join(tmp, 'external.md');
+  const jsonOutput = path.join(tmp, 'external.json');
+
+  try {
+    await mkdir(siteRoot, { recursive: true });
+    await writeFile(envFile, [
+      'NEXT_PUBLIC_GTM_ID=GTM-NHSTBZ3N',
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=https://auto-marketing-sigma.vercel.app',
+      'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-FECEN229PE',
+      'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600',
+      ''
+    ].join('\n'));
+
+    const { stdout } = await execFileAsync(process.execPath, [
+      fileURLToPath(new URL('../scripts/generate-external-setup-plan.mjs', import.meta.url)),
+      '--site-root',
+      siteRoot,
+      '--env-file',
+      envFile,
+      '--output',
+      output,
+      '--json-output',
+      jsonOutput
+    ]);
+    const cli = JSON.parse(stdout);
+    const markdown = await readFile(output, 'utf8');
+    const json = JSON.parse(await readFile(jsonOutput, 'utf8'));
+
+    assert.equal(cli.env_ready, false);
+    assert.deepEqual(cli.blocking_keys, [
+      'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
+      'NEXT_PUBLIC_META_PIXEL_ID',
+      'DOWNSTREAM_CRM_WEBHOOK_URL'
+    ]);
+    assert.equal(json.env_file, envFile);
+    assert.deepEqual(json.env.summary.missing, [
+      'DOWNSTREAM_CRM_WEBHOOK_URL',
+      'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
+      'NEXT_PUBLIC_META_PIXEL_ID'
+    ]);
+    assert.equal(markdown.includes(`운영 env 파일: \`${envFile}\``), true);
+    assert.match(markdown, /--env-file '/);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
