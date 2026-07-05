@@ -144,6 +144,7 @@ test('Vercel env readiness API reports ready state without exposing raw values',
     assert.equal(serialized.includes('crm.example.test'), false);
     assert.equal(serialized.includes('purchaseLabel123'), false);
     assert.equal(result.body.checks.every((check) => check.status === 'ready'), true);
+    assert.deepEqual(result.body.next_actions, []);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) {
@@ -170,6 +171,17 @@ test('Vercel env readiness API reports missing runtime values', async () => {
     assert.equal(result.body.ready, false);
     assert.equal(result.body.summary.missing.includes('NEXT_PUBLIC_GTM_ID'), true);
     assert.equal(result.body.summary.missing.includes('DOWNSTREAM_CRM_WEBHOOK_URL'), true);
+    assert.deepEqual(result.body.next_actions.map((action) => action.id), [
+      'gtm_container',
+      'ga4_stream',
+      'google_ads_purchase',
+      'meta_pixel',
+      'crm_downstream',
+      'browser_crm_endpoint',
+      'production_app_url'
+    ]);
+    assert.equal(result.body.next_actions[0].blocking_keys[0].key, 'NEXT_PUBLIC_GTM_ID');
+    assert.equal(JSON.stringify(result.body).includes('GTM-ABCDE12'), false);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) {
@@ -184,13 +196,15 @@ test('Vercel env readiness API reports missing runtime values', async () => {
 test('Vercel static surface exposes the demo and dashboard routes', async () => {
   const vercelConfig = JSON.parse(await readFile(path.join(kitRoot, 'vercel.json'), 'utf8'));
   const index = await readFile(path.join(kitRoot, 'index.html'), 'utf8');
+  const dashboard = await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8');
   const rewrites = new Map(vercelConfig.rewrites.map((rewrite) => [rewrite.source, rewrite.destination]));
 
   assert.equal(rewrites.get('/demo'), '/examples/demo-store.html');
   assert.equal(rewrites.get('/dashboard'), '/dashboard.html');
   assert.match(index, /href="\/demo\?crm=\/api\/crm\/events&autorun=1"/);
   assert.match(index, /id="probe" type="button"/);
-  assert.match(await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8'), /Marketing Automation Dashboard/);
+  assert.match(dashboard, /Marketing Automation Dashboard/);
+  assert.match(dashboard, /id="env-next-actions"/);
 });
 
 test('Vercel production verifier parses arguments and demo URL', () => {

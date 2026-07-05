@@ -342,6 +342,7 @@ async function verifyVercelProduction(options) {
     assert(json?.ok === true, 'Env readiness body is not ok');
     assert(Array.isArray(json.checks), 'Env readiness checks are missing');
     assert(json.summary && typeof json.summary.ready === 'boolean', 'Env readiness summary is missing');
+    assert(Array.isArray(json.next_actions), 'Env readiness next_actions are missing');
 
     if (options.requireEnvReady) {
       assert(json.ready === true, `Env readiness failed: ${JSON.stringify(json.summary)}`);
@@ -351,7 +352,8 @@ async function verifyVercelProduction(options) {
       url,
       http_status: response.status,
       ready: json.ready,
-      summary: json.summary
+      summary: json.summary,
+      next_actions: json.next_actions.map((action) => action.id)
     };
   }));
 

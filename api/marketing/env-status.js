@@ -16,6 +16,88 @@ function runtimeValues(requirements) {
   ]));
 }
 
+const ACTION_CATALOG = [
+  {
+    id: 'gtm_container',
+    title: 'GTM 웹 컨테이너 생성',
+    service: 'Google Tag Manager',
+    keys: ['NEXT_PUBLIC_GTM_ID'],
+    action: 'GTM에서 웹 컨테이너를 만들고 GTM-... ID를 Vercel production env에 입력하세요.'
+  },
+  {
+    id: 'ga4_stream',
+    title: 'GA4 웹 스트림 연결',
+    service: 'Google Analytics 4',
+    keys: ['NEXT_PUBLIC_GA4_MEASUREMENT_ID'],
+    action: 'GA4 웹 데이터 스트림을 만들고 G-... measurement ID를 Vercel production env와 GTM 변수에 반영하세요.'
+  },
+  {
+    id: 'google_ads_purchase',
+    title: 'Google Ads 구매 전환 액션 연결',
+    service: 'Google Ads',
+    keys: ['NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID', 'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL'],
+    action: '구매 전환 액션의 conversion ID와 purchase label을 확인해 GTM Google Ads purchase 태그 변수에 반영하세요.'
+  },
+  {
+    id: 'meta_pixel',
+    title: 'Meta Pixel 연결',
+    service: 'Meta Events Manager',
+    keys: ['NEXT_PUBLIC_META_PIXEL_ID'],
+    action: 'Meta Pixel을 만들고 numeric pixel ID를 Vercel production env와 GTM 변수에 반영하세요.'
+  },
+  {
+    id: 'crm_downstream',
+    title: '이메일/카카오 downstream webhook 연결',
+    service: 'CRM or messaging provider',
+    keys: ['DOWNSTREAM_CRM_WEBHOOK_URL'],
+    action: '이메일/카카오 발송툴의 HTTPS webhook endpoint를 DOWNSTREAM_CRM_WEBHOOK_URL에 입력하세요.'
+  },
+  {
+    id: 'browser_crm_endpoint',
+    title: '브라우저 CRM endpoint 연결',
+    service: 'Storefront',
+    keys: ['NEXT_PUBLIC_CRM_WEBHOOK_URL'],
+    action: '브라우저에서 호출할 CRM event endpoint를 /api/crm/events 또는 운영 HTTPS URL로 설정하세요.'
+  },
+  {
+    id: 'production_app_url',
+    title: '운영 storefront URL 확정',
+    service: 'Vercel',
+    keys: ['NEXT_PUBLIC_APP_URL'],
+    action: 'Vercel production domain을 NEXT_PUBLIC_APP_URL에 입력하고 GA4/광고 landing page 기준 URL로 사용하세요.'
+  }
+];
+
+function buildNextActions(checks) {
+  const checkByKey = new Map(checks.map((check) => [check.key, check]));
+
+  return ACTION_CATALOG
+    .map((item) => {
+      const blocking = item.keys
+        .map((key) => checkByKey.get(key))
+        .filter((check) => check && !check.ok)
+        .map((check) => ({
+          key: check.key,
+          label: check.label,
+          status: check.status,
+          required_for: check.required_for
+        }));
+
+      if (blocking.length === 0) {
+        return null;
+      }
+
+      return {
+        id: item.id,
+        title: item.title,
+        service: item.service,
+        action: item.action,
+        blocking_keys: blocking
+      };
+    })
+    .filter(Boolean);
+}
+
 async function handler(request, response) {
   if (request.method !== 'GET') {
     sendJson(response, 405, {
@@ -32,19 +114,22 @@ async function handler(request, response) {
     has_value: Boolean(values[requirement.key])
   }));
   const summary = summarize(checks);
+  const nextActions = buildNextActions(checks);
 
   sendJson(response, 200, {
     ok: true,
     ready: summary.ready,
     summary,
     checks,
+    next_actions: nextActions,
     next_step: summary.ready
       ? '운영 GTM/GA4/광고/CRM env 값이 준비되어 있습니다.'
-      : 'missing/placeholders/invalid 항목을 Vercel production environment variables에 실제 운영 값으로 채우세요.'
+      : 'next_actions 순서대로 외부 계정값을 확보한 뒤 Vercel production environment variables에 실제 운영 값으로 채우세요.'
   });
 }
 
 module.exports = handler;
 module.exports._internals = {
+  buildNextActions,
   runtimeValues
 };

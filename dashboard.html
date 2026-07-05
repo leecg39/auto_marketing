@@ -120,6 +120,24 @@
         font-size: 13px;
       }
 
+      .next-actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+        padding-left: 0;
+        list-style: none;
+      }
+
+      .next-actions li {
+        border-left: 3px solid var(--amber);
+        padding: 0 0 0 10px;
+      }
+
+      .next-actions strong {
+        display: block;
+        color: var(--ink);
+      }
+
       @media (max-width: 820px) {
         header {
           align-items: flex-start;
@@ -177,6 +195,7 @@
             <li id="env-status-detail">production env readiness 확인 중</li>
             <li>실제 GTM 게시와 광고 전환 테스트는 외부 계정값 필요</li>
           </ul>
+          <ul id="env-next-actions" class="next-actions" aria-label="다음 외부 계정 액션"></ul>
         </article>
         <article class="panel">
           <h2>다음 운영 검증</h2>
@@ -194,6 +213,35 @@
         if (target) {
           target.textContent = text;
         }
+      }
+
+      function renderNextActions(actions) {
+        var target = document.getElementById('env-next-actions');
+        var readyItem;
+        var readyTitle;
+        if (!target) {
+          return;
+        }
+
+        target.innerHTML = '';
+        if (!Array.isArray(actions) || actions.length === 0) {
+          readyItem = document.createElement('li');
+          readyTitle = document.createElement('strong');
+          readyTitle.textContent = '운영 env 준비 완료';
+          readyItem.appendChild(readyTitle);
+          readyItem.appendChild(document.createTextNode('GTM Preview, GA4 DebugView, 광고 테스트 이벤트 검증으로 넘어가세요.'));
+          target.appendChild(readyItem);
+          return;
+        }
+
+        actions.forEach(function (action) {
+          var item = document.createElement('li');
+          var title = document.createElement('strong');
+          title.textContent = action.service + ' - ' + action.title;
+          item.appendChild(title);
+          item.appendChild(document.createTextNode(action.action));
+          target.appendChild(item);
+        });
       }
 
       fetch('/api/marketing/env-status', { headers: { Accept: 'application/json' } })
@@ -215,11 +263,17 @@
               ? 'Vercel production env readiness 통과'
               : 'env 미준비: ' + missing.concat(placeholders, invalid).join(', ')
           );
+          renderNextActions(status.next_actions);
         })
         .catch(function () {
           setText('env-missing-count', '!');
           setText('env-summary', 'production env readiness API를 읽지 못했습니다.');
           setText('env-status-detail', 'production env readiness 확인 실패');
+          renderNextActions([{
+            service: 'Env readiness',
+            title: '확인 실패',
+            action: 'API 응답을 확인한 뒤 다시 시도하세요.'
+          }]);
         });
     </script>
   </body>
