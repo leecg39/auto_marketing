@@ -42,6 +42,7 @@
 - Vercel production env readiness API 보강:
   - 원본 env 값은 계속 노출하지 않음
   - `next_actions`로 GTM, GA4, Google Ads, Meta Pixel, CRM webhook별 다음 외부 계정 액션을 반환
+  - 외부 계정 생성/수정 또는 고객 연락처를 외부 공급자로 전송할 수 있는 액션은 `confirmation_required=true`로 표시
   - `/dashboard`에서 남은 외부 계정 액션을 서비스별로 표시
   - production alias `https://auto-marketing-sigma.vercel.app`에서 반영 확인
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인

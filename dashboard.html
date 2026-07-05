@@ -138,6 +138,17 @@
         color: var(--ink);
       }
 
+      .gate {
+        display: inline-flex;
+        margin-top: 4px;
+        border-radius: 999px;
+        padding: 3px 8px;
+        background: #fff7ed;
+        color: var(--amber);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
       @media (max-width: 820px) {
         header {
           align-items: flex-start;
@@ -237,8 +248,16 @@
         actions.forEach(function (action) {
           var item = document.createElement('li');
           var title = document.createElement('strong');
+          var gate;
           title.textContent = action.service + ' - ' + action.title;
           item.appendChild(title);
+          if (action.confirmation_required) {
+            gate = document.createElement('span');
+            gate.className = 'gate';
+            gate.textContent = '실행 전 확인 필요';
+            item.appendChild(gate);
+            item.appendChild(document.createElement('br'));
+          }
           item.appendChild(document.createTextNode(action.action));
           target.appendChild(item);
         });

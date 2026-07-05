@@ -181,6 +181,9 @@ test('Vercel env readiness API reports missing runtime values', async () => {
       'production_app_url'
     ]);
     assert.equal(result.body.next_actions[0].blocking_keys[0].key, 'NEXT_PUBLIC_GTM_ID');
+    assert.equal(result.body.next_actions[0].confirmation_required, true);
+    assert.match(result.body.next_actions[0].confirmation_reason, /GTM/);
+    assert.equal(result.body.next_actions.find((action) => action.id === 'production_app_url').confirmation_required, false);
     assert.equal(JSON.stringify(result.body).includes('GTM-ABCDE12'), false);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
@@ -205,6 +208,7 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   assert.match(index, /id="probe" type="button"/);
   assert.match(dashboard, /Marketing Automation Dashboard/);
   assert.match(dashboard, /id="env-next-actions"/);
+  assert.match(dashboard, /실행 전 확인 필요/);
 });
 
 test('Vercel production verifier parses arguments and demo URL', () => {
