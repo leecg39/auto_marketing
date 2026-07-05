@@ -37,6 +37,13 @@ test('normalizes common date and money formats', () => {
   assert.equal(parseMoney('(1,200)'), -1200);
 });
 
+test('keeps the local calendar day for non-ISO date formats in UTC+ timezones', () => {
+  // Before the fix, '6/27/2026' parsed as local midnight was converted with
+  // toISOString() and shifted to the previous day in timezones ahead of UTC.
+  assert.equal(normalizeDate('6/27/2026'), '2026-06-27');
+  assert.equal(normalizeDate('Jun 27 2026'), '2026-06-27');
+});
+
 test('passes when daily and total GA4 revenue are within threshold', () => {
   const orders = parseCsv([
     'order_date,order_revenue',

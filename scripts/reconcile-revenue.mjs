@@ -172,7 +172,12 @@ function normalizeDate(value) {
 
   const parsed = new Date(raw);
   if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
+    // Use local date parts: toISOString() converts to UTC and can shift the
+    // day for timezones ahead of UTC (e.g. KST midnight -> previous UTC day).
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   throw new Error(`Invalid date value: ${raw}`);
