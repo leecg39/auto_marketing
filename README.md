@@ -13,6 +13,7 @@
 - `docs/qa-checklist.md`: 게시 전 검증 체크리스트
 - `docs/live-deployment.md`: 실제 자사몰 적용 절차
 - `docs/execution-status.md`: 이 컴퓨터에서 실행/검증된 상태
+- `docs/oliveyoung-shopee-go-live.md`: 현재 Vercel/GTM/GA4 리소스 기준 운영 전환 runbook
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
 - `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `examples/oliveyoung-shopee.production.env.example`: 현재 Vercel/GTM/GA4 공개값이 들어간 프로젝트 전용 운영 env 후보
