@@ -19,6 +19,7 @@
 - `scripts/inspect-deployment-target.mjs`: 배포 플랫폼 링크, Vercel CLI 로그인, 기존 Vercel 프로젝트 후보, 운영 URL/env 차단점 점검기
 - `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 - `scripts/refresh-ops-status.mjs`: full QA, handoff, 완료 감사, 운영 대시보드를 한 번에 갱신하는 오케스트레이터
+- `index.html`, `api/crm/events.js`, `vercel.json`: Vercel production URL에서 바로 열리는 데모/대시보드/CRM 이벤트 API 표면
 
 ## 1. 사이트 공통 레이아웃에 SDK 추가
 
@@ -36,6 +37,8 @@ http://127.0.0.1:8081/marketing-automation-kit/examples/demo-store.html?crm=http
 CRM: http://127.0.0.1:8791
 Downstream simulator: http://127.0.0.1:8792
 ```
+
+Vercel에 연결된 production URL에서는 루트 페이지, `/demo`, `/dashboard`, `/api/crm/events`를 확인합니다.
 
 서버를 종료하려면:
 

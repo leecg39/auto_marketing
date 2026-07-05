@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marketing Automation Kit</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #14161a;
+        --muted: #626a73;
+        --line: #d9dde3;
+        --surface: #ffffff;
+        --wash: #f5f7f8;
+        --accent: #0f766e;
+        --accent-2: #b45309;
+        --accent-3: #2563eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--wash);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+
+      header,
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 28px 0 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        line-height: 1.3;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      a,
+      button {
+        min-height: 42px;
+        border-radius: 6px;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      a.primary,
+      button {
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: #fff;
+      }
+
+      button {
+        padding: 0 16px;
+        cursor: pointer;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+        gap: 16px;
+        align-items: stretch;
+        padding: 18px 0 28px;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+      }
+
+      .summary {
+        display: grid;
+        gap: 18px;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        border-left: 4px solid var(--accent);
+        background: #f8fbfa;
+        padding: 14px;
+      }
+
+      .metric:nth-child(2) {
+        border-color: var(--accent-2);
+      }
+
+      .metric:nth-child(3) {
+        border-color: var(--accent-3);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 22px;
+      }
+
+      .status {
+        display: grid;
+        gap: 10px;
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .status-row:last-child {
+        border-bottom: 0;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border-radius: 999px;
+        padding: 0 10px;
+        background: #e7f5ef;
+        color: #0f5f54;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .workflows {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 0 32px;
+      }
+
+      .workflow {
+        min-height: 138px;
+      }
+
+      pre {
+        min-height: 190px;
+        overflow: auto;
+        margin: 14px 0 0;
+        border-radius: 8px;
+        padding: 14px;
+        background: #111318;
+        color: #f4f7fb;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 860px) {
+        header,
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .metric-grid,
+        .workflows {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Marketing Automation Kit</h1>
+        <p>GA4, GTM, CRM 이벤트와 구매 전환 자동화 실행 환경</p>
+      </div>
+      <nav class="actions" aria-label="주요 링크">
+        <a class="primary" href="/demo?crm=/api/crm/events&autorun=1">데모 실행</a>
+        <a href="/dashboard">운영 대시보드</a>
+        <a href="https://github.com/leecg39/auto_marketing">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="panel summary">
+          <div>
+            <h2>퍼널 이벤트</h2>
+            <p>자사몰의 상품 조회부터 구매, 리드까지 GA4 권장 이벤트와 CRM 액션을 같은 계약으로 검증합니다.</p>
+          </div>
+          <div class="metric-grid" aria-label="자동화 구성 요약">
+            <div class="metric">
+              <strong>7</strong>
+              <span>GA4 events</span>
+            </div>
+            <div class="metric">
+              <strong>12</strong>
+              <span>GTM tags</span>
+            </div>
+            <div class="metric">
+              <strong>8</strong>
+              <span>CRM actions</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="probe" type="button">CRM 이벤트 테스트</button>
+            <a href="/api/crm/events">API 상태</a>
+          </div>
+          <pre id="result">대기 중</pre>
+        </div>
+
+        <aside class="panel status" aria-label="운영 준비 상태">
+          <h2>배포 표면</h2>
+          <div class="status-row">
+            <span>Production page</span>
+            <span class="badge">Ready</span>
+          </div>
+          <div class="status-row">
+            <span>CRM event API</span>
+            <span class="badge">Ready</span>
+          </div>
+          <div class="status-row">
+            <span>GTM/GA4 env</span>
+            <span class="badge">Pending</span>
+          </div>
+          <div class="status-row">
+            <span>Vercel CLI scope</span>
+            <span class="badge">Browser only</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="workflows" aria-label="자동화 플로우">
+        <article class="panel workflow">
+          <h2>장바구니 이탈</h2>
+          <p>60분 후 이메일/카카오 리마인드와 광고 리타겟팅 대상 업데이트</p>
+        </article>
+        <article class="panel workflow">
+          <h2>결제 이탈</h2>
+          <p>30분 후 리마인드, 구매 발생 시 예약 취소와 광고 제외 처리</p>
+        </article>
+        <article class="panel workflow">
+          <h2>구매 후속</h2>
+          <p>첫 구매 감사, 리뷰 요청, 재구매 알림, 구매자 광고 제외</p>
+        </article>
+        <article class="panel workflow">
+          <h2>리드 후속</h2>
+          <p>상담/문의 리드에 즉시 이메일/카카오 후속 액션 생성</p>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      var result = document.getElementById('result');
+      var probe = document.getElementById('probe');
+
+      function write(payload) {
+        result.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      probe.addEventListener('click', function () {
+        probe.disabled = true;
+        write({ status: 'sending' });
+
+        fetch('/api/crm/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_name: 'generate_lead',
+            occurred_at: new Date().toISOString(),
+            email: 'demo@example.test',
+            marketing_consent: true,
+            value: 10000,
+            utm_source: 'vercel',
+            utm_medium: 'production',
+            utm_campaign: 'marketing_automation'
+          })
+        })
+          .then(function (response) {
+            return response.json().then(function (body) {
+              return { status: response.status, body: body };
+            });
+          })
+          .then(write)
+          .catch(function (error) {
+            write({ ok: false, error: error.message });
+          })
+          .finally(function () {
+            probe.disabled = false;
+          });
+      });
+    </script>
+  </body>
+</html>
