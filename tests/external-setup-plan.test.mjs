@@ -80,6 +80,9 @@ test('renders external setup markdown with confirmation gates', async () => {
     assert.match(markdown, /탐색된 운영 URL/);
     assert.match(markdown, /tagmanager\.google\.com/);
     assert.match(markdown, /NEXT_PUBLIC_APP_URL/);
+    assert.match(markdown, /Action-time 확인 문구/);
+    assert.match(markdown, /oliveyoung-shopee-web을 실제 생성합니다/);
+    assert.equal(report.plan.tasks.find((task) => task.id === 'gtm_container').confirmation_prompt.includes('만들기를 눌러도 될까요'), true);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
@@ -112,6 +115,7 @@ test('external setup plan CLI writes markdown and JSON', async () => {
     assert.equal(cli.env_ready, false);
     assert.equal(markdown.includes('값을 받은 뒤 실행'), true);
     assert.equal(json.plan.tasks.some((task) => task.id === 'crm_delivery'), true);
+    assert.equal(json.plan.tasks.find((task) => task.id === 'crm_delivery').confirmation_prompt.includes('테스트 계정으로만 진행'), true);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

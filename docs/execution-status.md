@@ -53,6 +53,9 @@
 - 운영 대시보드 생성기 보강:
   - `npm run dashboard:ops -- --site-root /path/to/applied-store` 산출물의 `next_actions`에도 `confirmation_required`를 포함
   - `dist/growth-ops-dashboard.html`에 외부 계정 액션별 `실행 전 확인 필요` 라벨과 확인 사유 표시
+- 외부 계정 실행 체크리스트 보강:
+  - `npm run handoff:external -- --site-root /path/to/applied-store` 산출물에 `Action-time 확인 문구` 추가
+  - GTM, GA4, Google Ads, Meta, CRM delivery 작업별 즉시 사용할 확인 질문을 JSON/Markdown에 포함
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -158,6 +161,7 @@ npm run validate:env -- /path/to/applied-store
   - 외부 실행 항목: 운영 도메인, GTM 컨테이너, GA4 웹 스트림, Google Ads 구매 전환, Meta 픽셀, CRM webhook
   - 운영 URL 탐색 결과: 후보 사이트 env에서 `http://localhost:3000`만 발견, 운영 HTTPS URL 추천값 없음
   - 모든 계정 리소스 생성/게시/실제 발송은 Computer Use 실행 직전 사용자 확인 게이트 포함
+  - `gtm_container`, `ga4_stream`, `google_ads_purchase`, `meta_pixel`, `crm_delivery`에 action-time 확인 문구 포함
 - `npm run inspect:deployment -- --site-root /path/to/applied-store --vercel-project-url https://vercel.com/petasos/auto-marketing`: 배포 대상 점검 통과
   - 문서: `dist/deployment-target-plan.md`
   - JSON: `dist/deployment-target-plan.json`

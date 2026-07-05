@@ -49,7 +49,8 @@ const SETUP_TASKS = [
       'GTM Preview에서 view_item, add_to_cart, begin_checkout, purchase 이벤트 확인',
       'GTM 게시 버전 기록'
     ],
-    confirmation_gate: '컨테이너 최종 생성, Import Container 적용, Publish 클릭은 외부 계정 상태를 바꾸므로 실행 직전 확인합니다.'
+    confirmation_gate: '컨테이너 최종 생성, Import Container 적용, Publish 클릭은 외부 계정 상태를 바꾸므로 실행 직전 확인합니다.',
+    confirmation_prompt: 'GTM에서 Google 계정 leecg2908@gmail.com에 계정 oliveyoung-shopee, 웹 컨테이너 oliveyoung-shopee-web을 실제 생성합니다. 이 Google 계정 리소스를 만들기 위해 만들기를 눌러도 될까요?'
   },
   {
     id: 'ga4_stream',
@@ -71,7 +72,8 @@ const SETUP_TASKS = [
       'GA4 DebugView에서 7개 권장 이벤트 수신',
       'purchase 이벤트의 transaction_id와 value 확인'
     ],
-    confirmation_gate: 'GA4 속성/스트림 최종 생성은 외부 계정 리소스를 만들기 때문에 실행 직전 확인합니다.'
+    confirmation_gate: 'GA4 속성/스트림 최종 생성은 외부 계정 리소스를 만들기 때문에 실행 직전 확인합니다.',
+    confirmation_prompt: 'Google Analytics에서 leecg2908@gmail.com 계정에 GA4 속성 또는 웹 데이터 스트림을 실제 생성합니다. 이 Analytics 리소스를 만들기 위해 생성/저장을 눌러도 될까요?'
   },
   {
     id: 'google_ads_purchase',
@@ -94,7 +96,8 @@ const SETUP_TASKS = [
       '구매 전환 label',
       '테스트 구매 전환 수신 결과'
     ],
-    confirmation_gate: '전환 액션 생성/수정은 광고 계정 설정을 바꾸므로 실행 직전 확인합니다.'
+    confirmation_gate: '전환 액션 생성/수정은 광고 계정 설정을 바꾸므로 실행 직전 확인합니다.',
+    confirmation_prompt: 'Google Ads 계정 446-442-5600에서 구매 전환 액션을 실제 생성하거나 수정합니다. 광고 계정 설정을 바꾸기 위해 저장을 눌러도 될까요?'
   },
   {
     id: 'meta_pixel',
@@ -116,7 +119,8 @@ const SETUP_TASKS = [
       '테스트 이벤트 수신 결과',
       '운영 도메인 검증 상태'
     ],
-    confirmation_gate: '픽셀/데이터 세트 생성과 도메인 검증 저장은 외부 계정 상태를 바꾸므로 실행 직전 확인합니다.'
+    confirmation_gate: '픽셀/데이터 세트 생성과 도메인 검증 저장은 외부 계정 상태를 바꾸므로 실행 직전 확인합니다.',
+    confirmation_prompt: 'Meta Business에서 데이터 세트 또는 Pixel을 실제 생성하거나 도메인 검증 설정을 저장합니다. Meta 계정 상태를 바꾸기 위해 생성/저장을 눌러도 될까요?'
   },
   {
     id: 'crm_delivery',
@@ -138,7 +142,8 @@ const SETUP_TASKS = [
       '테스트 계정 발송 성공 로그',
       '수신동의 없는 계정 미발송 결과'
     ],
-    confirmation_gate: '실제 고객에게 메시지가 발송될 수 있는 provider 설정 저장 또는 테스트 발송 직전에 확인합니다.'
+    confirmation_gate: '실제 고객에게 메시지가 발송될 수 있는 provider 설정 저장 또는 테스트 발송 직전에 확인합니다.',
+    confirmation_prompt: '고객 연락처와 마케팅 이벤트를 이메일/카카오/CRM 공급자 webhook으로 전송할 수 있는 설정을 실제 저장하거나 테스트 발송합니다. 테스트 계정으로만 진행해도 될까요?'
   }
 ];
 
@@ -257,6 +262,7 @@ function renderMarkdown(report) {
     renderBullets(task.evidence),
     '',
     `Computer Use 확인 게이트: ${task.confirmation_gate}`,
+    ...(task.confirmation_prompt ? [`Action-time 확인 문구: ${task.confirmation_prompt}`] : []),
     ''
   ].join('\n'));
 
