@@ -1,6 +1,6 @@
 # 실행 상태
 
-확인일: 2026-06-27
+확인일: 2026-07-05
 
 ## 이 컴퓨터에서 실행 완료
 
@@ -56,15 +56,15 @@ npm run validate:env -- /path/to/applied-store
   - `deployment_ready`: `false`
   - 통과: `14`, 경고: `2`, 실패: `0`
   - GTM import 검증: `77/77` 체크 통과, 태그 12개/트리거 7개/변수 14개
-  - 경고 항목: 운영 GTM/GA4/광고/CRM env 값 미설정, 운영값 기반 GTM import 렌더링 대기
+  - 경고 항목: 운영 도메인/GTM/GA4/광고/CRM env 값 미준비, 운영값 기반 GTM import 렌더링 대기
 - `npm run handoff:deployment -- --site-root /path/to/applied-store`: 통과
   - 문서: `dist/deployment-handoff.md`
   - JSON: `dist/deployment-handoff.json`
-  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
-- `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 누락으로 예상대로 미생성
+  - 차단 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_APP_URL`
+- `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 미준비로 예상대로 미생성
   - 출력: `ok=false`
   - 파일 쓰기 없음
-  - 누락 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
+  - 차단 운영값: `NEXT_PUBLIC_GTM_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_APP_URL`
 - `npm run audit:completion -- --site-root /path/to/applied-store`: 완료 감사 리포트 생성
   - 문서: `dist/completion-audit.md`
   - JSON: `dist/completion-audit.json`
@@ -73,10 +73,10 @@ npm run validate:env -- /path/to/applied-store
 - `npm run dashboard:ops -- --site-root /path/to/applied-store`: 운영 대시보드 생성
   - HTML: `dist/growth-ops-dashboard.html`
   - JSON: `dist/growth-ops-dashboard.json`
-  - full QA, 완료 감사, handoff, 현재 env 누락값과 다음 외부 계정 액션을 한 화면으로 요약
+  - full QA, 완료 감사, handoff, 현재 env 차단값과 다음 외부 계정 액션을 한 화면으로 요약
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
-  - 현재 판정: 운영 env 값 누락으로 `ok=false`
+  - 현재 판정: 운영 env 값 미준비로 `ok=false`
 - `npm test`: 75개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
@@ -103,7 +103,7 @@ npm run validate:env -- /path/to/applied-store
   - 체크: `77/77`
   - GA4 이벤트 7개, Google Ads 구매 전환, Meta Pixel 3개, Custom Event trigger 7개, DLV 10개, Consent Mode 요구사항 확인
   - contact PII 변수/파라미터 미포함 확인
-- `npm run validate:env -- /path/to/applied-store`: `.env.local` 로드, 운영 GTM/GA4/광고/CRM 값 미설정 확인
+- `npm run validate:env -- /path/to/applied-store`: `.env.local` 로드, 운영 도메인/GTM/GA4/광고/CRM 값 미준비 확인
 
 실행 중인 서버를 종료하려면:
 
@@ -210,6 +210,7 @@ npm run stop:local
 - Google Ads 구매 전환 ID/라벨 연결
 - Meta Pixel ID 연결
 - 실제 CRM/카카오/이메일 발송툴 webhook URL 연결
+- 운영 자사몰 HTTPS 도메인 확정
 - 운영 도메인 CORS 설정
 - 실제 운영 주문 DB CSV와 GA4 CSV export 후 48시간 매출 비교 실행
 
@@ -220,6 +221,7 @@ npm run stop:local
 - Google Ads 구매 전환 라벨
 - Meta Pixel ID
 - CRM/카카오/이메일 발송툴 webhook URL과 API 키
+- 운영 자사몰 HTTPS URL (`NEXT_PUBLIC_APP_URL`)
 
 ## 이 컴퓨터에서 확인한 외부 계정 상태
 

@@ -65,6 +65,7 @@ test('deployment env validator reports ready only for real-looking IDs', async (
     await writeFile(path.join(tmp, '.env.local'), [
       'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
       'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=https://store.example.test',
       'DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/events',
       'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCD123456',
       'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
@@ -91,6 +92,7 @@ test('deployment env validator flags placeholders and missing downstream CRM', a
     await writeFile(path.join(tmp, '.env.local'), [
       'NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX',
       'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=http://localhost:3000',
       'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX',
       'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-XXXXXXXXX',
       'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=replace-with-purchase-label',
@@ -103,6 +105,7 @@ test('deployment env validator flags placeholders and missing downstream CRM', a
     assert.equal(report.ready, false);
     assert.equal(report.summary.missing.includes('DOWNSTREAM_CRM_WEBHOOK_URL'), true);
     assert.equal(report.summary.placeholders.includes('NEXT_PUBLIC_GTM_ID'), true);
+    assert.equal(report.summary.placeholders.includes('NEXT_PUBLIC_APP_URL'), true);
     assert.equal(report.summary.placeholders.includes('NEXT_PUBLIC_GA4_MEASUREMENT_ID'), true);
   } finally {
     await rm(tmp, { recursive: true, force: true });

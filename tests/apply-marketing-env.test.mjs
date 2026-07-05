@@ -20,6 +20,7 @@ function validMarketingEnv() {
   return [
     'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
     'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+    'NEXT_PUBLIC_APP_URL=https://store.example.test',
     'DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/events',
     'DOWNSTREAM_CRM_API_KEY=test-api-key-123456',
     'NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY=KRW',
@@ -108,6 +109,7 @@ test('applies marketing env and validates target readiness', async () => {
     assert.equal(report.ok, true);
     assert.equal(report.deployment_ready, true);
     assert.equal(Boolean(report.backup_file), true);
+    assert.equal(targetText.includes('NEXT_PUBLIC_APP_URL=https://store.example.test'), true);
     assert.equal(targetText.includes('NEXT_PUBLIC_GTM_ID=GTM-ABC1234'), true);
     assert.equal(targetText.includes('DOWNSTREAM_CRM_API_KEY=test-api-key-123456'), true);
   } finally {

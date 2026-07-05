@@ -125,6 +125,7 @@ function handoff({ ready = false } = {}) {
 const READY_ENV = [
   'NEXT_PUBLIC_GTM_ID=GTM-ABCDE12',
   'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+  'NEXT_PUBLIC_APP_URL=https://store.example.test',
   'DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/webhook',
   'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCDE12345',
   'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',

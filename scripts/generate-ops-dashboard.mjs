@@ -21,6 +21,10 @@ const ACTION_BY_KEY = {
     title: 'GA4 웹 스트림 생성',
     detail: 'GA4 속성과 웹 데이터 스트림을 만든 뒤 G-... 측정 ID를 GTM 변수로 연결합니다.'
   },
+  NEXT_PUBLIC_APP_URL: {
+    title: '운영 자사몰 도메인 확정',
+    detail: 'GA4 웹 스트림, 광고 랜딩 페이지, Meta 도메인 검증에 사용할 https 운영 URL을 env에 넣습니다.'
+  },
   NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: {
     title: 'Google Ads 구매 전환 액션 생성',
     detail: '구매 전환 액션을 만든 뒤 conversion label을 운영 env에 넣습니다.'

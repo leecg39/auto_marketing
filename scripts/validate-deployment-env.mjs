@@ -25,6 +25,13 @@ const REQUIREMENTS = [
     placeholder: /^$/
   },
   {
+    key: 'NEXT_PUBLIC_APP_URL',
+    label: 'Production storefront URL',
+    required_for: ['ga4_web_stream', 'ads_landing_page', 'meta_domain_verification', 'crm_cors'],
+    pattern: /^https:\/\/(?!localhost(?:\/|:|$))(?!127\.0\.0\.1(?:\/|:|$))[^\s]+$/i,
+    placeholder: /^https:\/\/your-store\.example|^https:\/\/example\.com|^http:\/\/localhost|^http:\/\/127\.0\.0\.1/i
+  },
+  {
     key: 'DOWNSTREAM_CRM_WEBHOOK_URL',
     label: 'Email/Kakao/CRM downstream webhook',
     required_for: ['email_kakao_delivery'],

@@ -20,6 +20,7 @@ test('builds a deployment env template with required marketing keys', () => {
   const block = envBlock();
 
   assert.equal(block.includes('NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX'), true);
+  assert.equal(block.includes('NEXT_PUBLIC_APP_URL=https://your-store.example'), true);
   assert.equal(block.includes('NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX'), true);
   assert.equal(block.includes('NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events'), true);
   assert.equal(block.includes('NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY=KRW'), true);

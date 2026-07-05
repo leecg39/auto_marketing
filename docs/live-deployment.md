@@ -9,6 +9,7 @@
 - Google Ads 전환 ID와 구매 전환 라벨
 - Meta Pixel ID
 - CRM/이메일/카카오 발송툴 webhook URL과 API 키
+- 운영 자사몰 HTTPS URL: `NEXT_PUBLIC_APP_URL=https://your-store.example`
 - 자사몰 코드의 공통 레이아웃, 상품 상세, 장바구니, 결제 시작, 결제 성공 페이지 접근 권한
 
 ## 코드 적용
@@ -96,7 +97,7 @@ npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-운영 GTM/GA4/광고/CRM 값까지 반드시 준비됐는지 실패 조건으로 묶으려면 `ops:refresh` 또는 `full:qa`에 `--require-env-ready`를 추가합니다.
+운영 도메인/GTM/GA4/광고/CRM 값까지 반드시 준비됐는지 실패 조건으로 묶으려면 `ops:refresh` 또는 `full:qa`에 `--require-env-ready`를 추가합니다.
 
 운영 계정값을 채우기 위한 handoff 문서는 아래 명령으로 생성합니다.
 

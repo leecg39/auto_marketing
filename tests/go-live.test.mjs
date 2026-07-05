@@ -15,6 +15,7 @@ function validMarketingEnv() {
   return [
     'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
     'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+    'NEXT_PUBLIC_APP_URL=https://store.example.test',
     'DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/events',
     'DOWNSTREAM_CRM_API_KEY=test-api-key-123456',
     'NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY=KRW',
@@ -144,6 +145,7 @@ test('go-live applies env and renders production GTM import before strict QA', a
     assert.equal(report.steps.find((item) => item.id === 'apply_env').status, 'passed');
     assert.equal(report.steps.find((item) => item.id === 'render_gtm_import').status, 'passed');
     assert.equal(report.steps.find((item) => item.id === 'validate_site_env').status, 'passed');
+    assert.equal(targetText.includes('NEXT_PUBLIC_APP_URL=https://store.example.test'), true);
     assert.equal(targetText.includes('NEXT_PUBLIC_GTM_ID=GTM-ABC1234'), true);
     assert.equal(rendered.containerVersion.container.publicId, 'GTM-ABC1234');
   } finally {

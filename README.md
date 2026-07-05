@@ -74,7 +74,7 @@ npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples
 
 GitHub Actions의 `CI` 워크플로도 push와 pull request에서 `check`, `test`, GTM import 검증, 예제 매출 대조를 실행합니다.
 
-키트, 로컬 데모, 실제 적용 사이트 검증을 한 번에 묶어 실행하려면 아래 명령을 사용합니다. `--require-env-ready`를 붙이면 운영 GTM/GA4/광고/CRM 값 누락도 실패로 처리합니다.
+키트, 로컬 데모, 실제 적용 사이트 검증을 한 번에 묶어 실행하려면 아래 명령을 사용합니다. `--require-env-ready`를 붙이면 운영 도메인/GTM/GA4/광고/CRM 값 미준비도 실패로 처리합니다.
 
 ```bash
 cd marketing-automation-kit
