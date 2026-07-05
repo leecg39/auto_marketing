@@ -365,6 +365,18 @@ npm run stop:local
 
 ## 이 컴퓨터에서 확인한 외부 계정 상태
 
+확인일: 2026-07-06
+
+- Google 계정: `leecg2908@gmail.com`
+- GTM: 계정 `oliveyoung-shopee`, 웹 컨테이너 `oliveyoung-shopee-web`이 생성됐고 컨테이너 ID는 `GTM-NHSTBZ3N`입니다. GTM 설치 모달의 웹사이트 테스트에서 `https://auto-marketing-sigma.vercel.app`에 Google 태그가 감지됐습니다.
+- GA4: 계정/속성 `oliveyoung-shopee` / `oliveyoung-shopee-web`이 생성됐고 웹 스트림 URL은 `https://auto-marketing-sigma.vercel.app`, 스트림 ID는 `15202126894`, 측정 ID는 `G-FECEN229PE`입니다.
+- Vercel production: `NEXT_PUBLIC_GTM_ID=GTM-NHSTBZ3N`, `NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-FECEN229PE`, `NEXT_PUBLIC_APP_URL=https://auto-marketing-sigma.vercel.app`, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600`가 반영됐습니다.
+- Production QA: `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app` 기준 8/8 통과했습니다. 데모 dataLayer 자동 실행 이벤트는 `gtm.js`, `view_item`, `add_to_cart`, `begin_checkout`, `gtm.dom`, `gtm.load`, `purchase`, `generate_lead`이고 PII 유입은 없었습니다.
+- 남은 env blocker: `DOWNSTREAM_CRM_WEBHOOK_URL`, `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`.
+- Google Ads: 계정 `446-442-5600`에서 전환 관리 URL(`/aw/conversions`)과 `ocid=8286840882` 전환 URL 모두 새 스마트 캠페인 온보딩으로 리다이렉트됩니다. 캠페인 URL 입력, 다음, 저장은 누르지 않았고 기존 구매 전환 label은 읽지 못했습니다.
+- Meta: Events Manager 계정 `1326028795156580`에 접근됐지만 데이터 세트 화면이 `데이터 소스 없음` 상태입니다. 기존 Pixel ID는 없어서 새 데이터 세트/Pixel 생성이 필요합니다.
+- 아직 실행하지 않은 외부 상태 변경: Google Ads 구매 전환 액션 생성/수정, Meta 데이터 세트/Pixel 생성, GTM import 적용/게시, 실제 이메일/카카오/CRM provider webhook 저장 또는 테스트 발송.
+
 확인일: 2026-07-05
 
 - Google 계정: `leecg2908@gmail.com`
