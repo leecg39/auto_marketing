@@ -90,6 +90,7 @@ function parseArgs(args) {
     startLocal: false,
     startSite: false,
     requireEnvReady: false,
+    siteEventProbe: false,
     sitePort: DEFAULT_SITE_PORT,
     timeoutMs: DEFAULT_TIMEOUT_MS,
     report: DEFAULT_REPORT
@@ -125,6 +126,10 @@ function parseArgs(args) {
     }
     if (key === 'require-env-ready') {
       parsed.requireEnvReady = true;
+      continue;
+    }
+    if (key === 'site-event-probe') {
+      parsed.siteEventProbe = true;
       continue;
     }
     if (key === 'help') {
@@ -321,12 +326,19 @@ function buildSteps(options) {
   }
 
   if (options.siteChecks && options.siteUrl) {
+    const siteRuntimeArgs = ['run', 'verify:site', '--', '--site-url', options.siteUrl];
+    if (options.siteEventProbe) {
+      siteRuntimeArgs.push('--event-probe');
+    }
+
     steps.push({
       id: 'site_runtime',
-      label: 'Applied store runtime SDK, consent UI, and CRM route QA',
+      label: options.siteEventProbe
+        ? 'Applied store runtime SDK, event probe, consent UI, and CRM route QA'
+        : 'Applied store runtime SDK, consent UI, and CRM route QA',
       cwd: KIT_ROOT,
       command: 'npm',
-      args: ['run', 'verify:site', '--', '--site-url', options.siteUrl],
+      args: siteRuntimeArgs,
       fatal: true,
       expectJson: true,
       requiresSiteServer: true
@@ -616,6 +628,7 @@ function usage() {
     '  --skip-live             Skip verify:local and verify:browser.',
     '  --skip-site             Skip applied store checks.',
     '  --require-env-ready     Treat missing GTM/GA4/Ads/CRM env values as a failure.',
+    '  --site-event-probe      Execute SDK event probe during applied store runtime QA.',
     '  --report FILE           Write JSON report. Default: dist/full-qa-report.json'
   ].join('\n');
 }

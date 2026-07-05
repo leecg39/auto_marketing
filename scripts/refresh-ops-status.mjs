@@ -91,6 +91,7 @@ function parseArgs(args) {
     startLocal: false,
     startSite: false,
     requireEnvReady: false,
+    siteEventProbe: false,
     skipFullQa: false,
     openDashboard: false
   };
@@ -121,6 +122,10 @@ function parseArgs(args) {
     }
     if (key === 'require-env-ready') {
       parsed.requireEnvReady = true;
+      continue;
+    }
+    if (key === 'site-event-probe') {
+      parsed.siteEventProbe = true;
       continue;
     }
     if (key === 'skip-full-qa') {
@@ -197,6 +202,9 @@ function buildSteps(options) {
     }
     if (options.requireEnvReady) {
       args.push('--require-env-ready');
+    }
+    if (options.siteEventProbe) {
+      args.push('--site-event-probe');
     }
 
     steps.push({
@@ -378,6 +386,7 @@ function printHelp() {
     '  --site-port <number>     Storefront dev server port, default 3100',
     '  --timeout-ms <number>    Per-command timeout passed to full QA, default 240000',
     '  --require-env-ready      Treat missing operating env as full QA failure',
+    '  --site-event-probe       Execute SDK event probe during applied store runtime QA',
     '  --skip-full-qa           Regenerate handoff/external setup/audit/dashboard from existing QA evidence',
     '  --open-dashboard         Open dist/growth-ops-dashboard.html after refresh',
     '  --report <path>          JSON refresh report output'

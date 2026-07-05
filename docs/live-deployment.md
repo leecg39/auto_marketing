@@ -93,6 +93,7 @@ npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-sit
 
 ```bash
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
@@ -129,7 +130,7 @@ npm run audit:completion -- --site-root /path/to/your-store --strict
 1. `npm test`와 `npm run check`를 통과시킵니다.
 2. `npm run verify:local`로 로컬 데모, CRM 이벤트 플로우, 자동화 액션, downstream webhook 전달을 확인합니다.
 3. `npm run verify:browser`로 headless Chrome에서 dataLayer 이벤트, CRM 플로우, downstream 전달, 구매 중복 방지, 개인정보 제거를 확인합니다.
-4. 자사몰 dev/prod 서버를 띄운 뒤 `npm run verify:site -- --site-url http://127.0.0.1:3000`로 SDK, consent UI, CRM route 런타임 동작을 확인합니다.
+4. 자사몰 dev/prod 서버를 띄운 뒤 `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`로 SDK, consent UI, CRM route, 실제 dataLayer 이벤트 7개, 구매 중복 방지, 개인정보 제거를 확인합니다.
 5. `npm run audit:site -- /path/to/your-store`에서 SDK, Provider, CRM route, 7개 이벤트 지원이 확인됩니다.
 6. `npm run validate:env -- /path/to/your-store`에서 `ready: true`가 나옵니다.
 7. `npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env`가 통과합니다.

@@ -3,9 +3,11 @@ import { createServer } from 'node:http';
 import test from 'node:test';
 
 import {
+  EXPECTED_EVENT_PROBE_EVENTS,
   joinUrl,
   normalizeBaseUrl,
   parseArgs,
+  verifyEventProbeResult,
   verifyPageDom,
   verifySiteRuntime
 } from '../scripts/verify-site-runtime.mjs';
@@ -89,10 +91,21 @@ async function withFixtureServer(callback) {
 test('normalizes runtime QA URLs and args', () => {
   assert.equal(normalizeBaseUrl('http://127.0.0.1:3000/foo/?a=1'), 'http://127.0.0.1:3000/foo');
   assert.equal(joinUrl('http://127.0.0.1:3000/', 'signup'), 'http://127.0.0.1:3000/signup');
-  assert.deepEqual(parseArgs(['--site-url', 'http://127.0.0.1:3000', '--path', '/', '--skip-browser']), {
+  assert.deepEqual(parseArgs([
+    '--site-url',
+    'http://127.0.0.1:3000',
+    '--path',
+    '/',
+    '--skip-browser',
+    '--event-probe',
+    '--event-probe-path',
+    '/signup'
+  ]), {
     paths: ['/'],
     siteUrl: 'http://127.0.0.1:3000',
-    skipBrowser: true
+    skipBrowser: true,
+    eventProbe: true,
+    eventProbePath: '/signup'
   });
 });
 
@@ -122,4 +135,39 @@ test('verifies site runtime HTTP and CRM surfaces without browser QA', async () 
     assert.equal(report.crm.accepted.ok, true);
     assert.equal(report.crm.rejected_contact_without_consent.ok, true);
   });
+});
+
+test('summarizes event probe results and rejects unsafe dataLayer output', () => {
+  const passing = verifyEventProbeResult({
+    ok: true,
+    href: 'http://127.0.0.1:3000/',
+    events: EXPECTED_EVENT_PROBE_EVENTS,
+    calls: EXPECTED_EVENT_PROBE_EVENTS.map((eventName) => ({ name: eventName, ok: true })),
+    duplicate_purchase: {
+      skipped: true,
+      reason: 'duplicate_transaction_id'
+    },
+    pii_in_data_layer: false,
+    crm_consent: false,
+    dataLayerEvents: EXPECTED_EVENT_PROBE_EVENTS.map((eventName) => ({ event: eventName }))
+  });
+  const failing = verifyEventProbeResult({
+    ok: true,
+    events: EXPECTED_EVENT_PROBE_EVENTS.filter((eventName) => eventName !== 'purchase'),
+    calls: [{ name: 'purchase', ok: false, error: 'transaction_id is required' }],
+    duplicate_purchase: {
+      skipped: false
+    },
+    pii_in_data_layer: true,
+    crm_consent: true,
+    dataLayerEvents: []
+  });
+
+  assert.equal(passing.ok, true);
+  assert.equal(passing.duplicate_purchase_ok, true);
+  assert.equal(passing.data_layer_event_count, EXPECTED_EVENT_PROBE_EVENTS.length);
+  assert.equal(failing.ok, false);
+  assert.deepEqual(failing.missing_events, ['purchase']);
+  assert.equal(failing.failed_calls[0].name, 'purchase');
+  assert.equal(failing.pii_in_data_layer, true);
 });

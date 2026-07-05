@@ -25,8 +25,9 @@
 
 ```bash
 cd marketing-automation-kit
-npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000
+npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
 npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000
+npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
 npm run handoff:deployment -- --site-root /path/to/applied-store
 npm run handoff:external -- --site-root /path/to/applied-store
 npm run apply:env -- --site-root /path/to/applied-store --env-file /path/to/marketing-production.env --dry-run
@@ -39,6 +40,7 @@ npm run check
 npm run verify:local
 npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3100
+npm run verify:site -- --site-url http://127.0.0.1:3100 --event-probe
 npm run verify:gtm
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 npm run generate:gtm -- --public-id GTM-XXXXXXX
@@ -47,12 +49,12 @@ npm run validate:env -- /path/to/applied-store
 
 현재 검증 결과:
 
-- `npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000`: full QA, handoff, 외부 계정 실행 체크리스트, 완료 감사, 운영 대시보드 갱신
+- `npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: full QA, 실제 사이트 event probe, handoff, 외부 계정 실행 체크리스트, 완료 감사, 운영 대시보드 갱신
   - 리포트: `dist/ops-refresh-report.json`
   - 대시보드: `dist/growth-ops-dashboard.html`
   - 외부 계정 체크리스트: `dist/external-account-setup.md`
   - 요약: `passed=5`, `warning=0`, `skipped=0`, `failed=0`
-- `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000`: 통과
+- `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`
   - `deployment_ready`: `false`
@@ -84,7 +86,7 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
-- `npm test`: 80개 테스트 통과
+- `npm test`: 82개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
@@ -100,6 +102,11 @@ npm run validate:env -- /path/to/applied-store
   - `/assets/marketing-automation.js`: `200 OK`, SDK global 포함 확인
   - `/api/crm/events`: 동의 계정 `202`, 미동의 연락처 payload `422` 확인
   - `/`, `/signup`, `/margin-calculator`: SDK script, consent banner, 동의/거부 버튼 확인
+- `npm run verify:site -- --site-url http://127.0.0.1:3100 --event-probe`: 실제 후보 사이트 브라우저 이벤트 probe 통과
+  - dataLayer 이벤트: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `sign_up`, `login`, `generate_lead`
+  - `duplicate_transaction_id` 중복 구매 방지 확인
+  - dataLayer 개인정보 미포함 확인
+  - event probe는 CRM consent를 `false`로 고정해 외부 발송 없이 dataLayer만 검증
 - `npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv`: 예제 주문/GA4 매출 대조 통과
   - 전체 주문 매출: `280000`
   - 전체 GA4 매출: `276000`
@@ -158,6 +165,7 @@ npm run stop:local
 - 운영 마케팅 env dry-run/병합 명령: `npm run apply:env -- --site-root /path/to/store --env-file /path/to/marketing-production.env --dry-run`
 - headless Chrome 브라우저 QA 명령: `npm run verify:browser`
 - 실제 자사몰 런타임 QA 명령: `npm run verify:site -- --site-url http://127.0.0.1:3000`
+- 실제 자사몰 dataLayer 이벤트 probe 명령: `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`
 - 주문 DB와 GA4 매출 CSV 대조 명령: `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`
 - 실제 자사몰 적용 절차 문서
 - 실제 자사몰 후보 탐색 명령: `npm run find:sites`

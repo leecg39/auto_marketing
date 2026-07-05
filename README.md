@@ -69,6 +69,7 @@ npm run check
 npm run verify:local
 npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3000
+npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 ```
 
@@ -79,6 +80,7 @@ GitHub Actions의 `CI` 워크플로도 push와 pull request에서 `check`, `test
 ```bash
 cd marketing-automation-kit
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 ```
 
 수동으로 나누어 실행하려면 아래 명령을 사용합니다.
@@ -86,6 +88,7 @@ npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-sit
 ```bash
 cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
