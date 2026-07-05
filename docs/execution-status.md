@@ -20,6 +20,22 @@
 - Vercel production dashboard 확인: `https://auto-marketing-sigma.vercel.app/dashboard`
 - Vercel serverless CRM API 확인: `https://auto-marketing-sigma.vercel.app/api/crm/events`
 - Vercel production env readiness API 확인: `https://auto-marketing-sigma.vercel.app/api/marketing/env-status`
+- Vercel `petasos/auto-marketing` production env 확정값 반영:
+  - `NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events`
+  - `NEXT_PUBLIC_APP_URL=https://auto-marketing-sigma.vercel.app`
+  - `NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY=KRW`
+- Vercel production redeploy 확인:
+  - 기준 deployment: `dpl_DFpDtjckBqoVhTLpPWfsKjc6za1j`
+  - 신규 deployment: `dpl_3enpokm8WGy4UYhX9ucJhgyrAXyH`
+  - 신규 URL: `https://auto-marketing-km1xvqk4x-petasos.vercel.app`
+  - 상태: `READY`
+- Vercel production env readiness 현재 남은 외부값:
+  - `NEXT_PUBLIC_GTM_ID`
+  - `DOWNSTREAM_CRM_WEBHOOK_URL`
+  - `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+  - `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID`
+  - `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`
+  - `NEXT_PUBLIC_META_PIXEL_ID`
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
