@@ -50,6 +50,7 @@ npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3100
 npm run verify:site -- --site-url http://127.0.0.1:3100 --event-probe
 npm run verify:prod-site -- --site-root /path/to/applied-store --site-port 3101 --timeout-ms 240000 --build --event-probe
+npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app
 npm run verify:gtm
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 npm run generate:gtm -- --public-id GTM-XXXXXXX
@@ -80,6 +81,11 @@ npm run validate:env -- /path/to/applied-store
   - `/dashboard`: `200`, title `Marketing Automation Dashboard`
   - `/api/crm/events` GET: `{"ok":true,"service":"marketing-automation-crm-events"}`
   - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
+- `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`: Vercel production 자동 검증 통과
+  - 리포트: `dist/vercel-production-report.json`
+  - 요약: `passed=6`, `failed=0`
+  - 체크: root page, dashboard page, API health, purchase flow, consent gate, demo browser autorun
+  - browser autorun: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, 구매 중복 방지, dataLayer PII 미포함 확인
 - `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`
@@ -227,6 +233,7 @@ npm run stop:local
 - headless Chrome 브라우저 QA 명령: `npm run verify:browser`
 - 실제 자사몰 런타임 QA 명령: `npm run verify:site -- --site-url http://127.0.0.1:3000`
 - 실제 자사몰 dataLayer 이벤트 probe 명령: `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`
+- Vercel production 표면 QA 명령: `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`
 - 주문 DB와 GA4 매출 CSV 대조 명령: `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`
 - 실제 자사몰 적용 절차 문서
 - 실제 자사몰 후보 탐색 명령: `npm run find:sites`

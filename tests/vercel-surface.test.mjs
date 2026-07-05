@@ -6,6 +6,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  demoUrl,
+  parseArgs,
+  titleOf,
+  verifyQaResult
+} from '../scripts/verify-vercel-production.mjs';
+
 const require = createRequire(import.meta.url);
 const handler = require('../api/crm/events.js');
 const kitRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,4 +118,61 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   assert.match(index, /href="\/demo\?crm=\/api\/crm\/events&autorun=1"/);
   assert.match(index, /id="probe" type="button"/);
   assert.match(await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8'), /Marketing Automation Dashboard/);
+});
+
+test('Vercel production verifier parses arguments and demo URL', () => {
+  const parsed = parseArgs([
+    '--base-url',
+    'https://auto-marketing-sigma.vercel.app/',
+    '--skip-browser',
+    '--timeout-ms',
+    '1000',
+    '--report',
+    '/tmp/vercel-report.json'
+  ]);
+
+  assert.equal(parsed.baseUrl, 'https://auto-marketing-sigma.vercel.app');
+  assert.equal(parsed.browser, false);
+  assert.equal(parsed.timeoutMs, 1000);
+  assert.equal(parsed.report, '/tmp/vercel-report.json');
+  assert.equal(
+    demoUrl(parsed.baseUrl),
+    'https://auto-marketing-sigma.vercel.app/demo?crm=%2Fapi%2Fcrm%2Fevents&autorun=1'
+  );
+  assert.equal(titleOf('<html><title>Marketing Automation Kit</title></html>'), 'Marketing Automation Kit');
+});
+
+test('Vercel production verifier validates browser autorun QA DOM', () => {
+  const qa = {
+    ok: true,
+    events: ['view_item', 'add_to_cart', 'begin_checkout', 'purchase', 'generate_lead'],
+    crm_flows: [
+      'cart_abandonment_candidate',
+      'checkout_abandonment_candidate',
+      'post_purchase_review_and_recommendation',
+      'lead_followup'
+    ],
+    automation_action_flows: [
+      'cart_abandonment_reminder',
+      'cart_retargeting_audience',
+      'checkout_abandonment_reminder',
+      'checkout_retargeting_audience',
+      'review_request',
+      'repurchase_due',
+      'purchase_exclusion',
+      'lead_followup'
+    ],
+    delivery_statuses: [202, 202, 202, 202],
+    pii_in_data_layer: false,
+    duplicate_purchase: {
+      skipped: true,
+      reason: 'duplicate_transaction_id'
+    }
+  };
+  const dom = `<div id="qa-result" data-ok="true">QA: ${JSON.stringify(qa).replace(/"/g, '&quot;')}</div>`;
+  const summary = verifyQaResult(dom);
+
+  assert.deepEqual(summary.delivery_statuses, [202, 202, 202, 202]);
+  assert.equal(summary.duplicate_purchase, 'duplicate_transaction_id');
+  assert.equal(summary.pii_in_data_layer, false);
 });
