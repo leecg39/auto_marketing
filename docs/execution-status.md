@@ -15,6 +15,10 @@
 - CRM health 확인: `{"ok":true}`
 - 브라우저 데모에서 `purchase` 이벤트 발생 확인
 - 브라우저 데모에서 CRM 플로우 `post_purchase_review_and_recommendation` 확인
+- Vercel production URL 확인: `https://auto-marketing-sigma.vercel.app/`
+- Vercel production demo 확인: `https://auto-marketing-sigma.vercel.app/demo?crm=/api/crm/events&autorun=1`
+- Vercel production dashboard 확인: `https://auto-marketing-sigma.vercel.app/dashboard`
+- Vercel serverless CRM API 확인: `https://auto-marketing-sigma.vercel.app/api/crm/events`
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -70,6 +74,12 @@ npm run validate:env -- /path/to/applied-store
   - 리포트: `dist/ops-refresh-report.json`
   - 요약: `passed=5`, `warning=0`, `skipped=1`, `failed=0`
   - 배포 대상 blocker: `target_vercel_project_inaccessible`, `hosting_project_not_linked`, `marketing_env_not_ready`
+- Vercel production surface QA: 통과
+  - `/`: `200`, title `Marketing Automation Kit`
+  - `/demo?crm=/api/crm/events&autorun=1`: `200`, 브라우저 autorun 결과 `ok:true`
+  - `/dashboard`: `200`, title `Marketing Automation Dashboard`
+  - `/api/crm/events` GET: `{"ok":true,"service":"marketing-automation-crm-events"}`
+  - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
 - `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`
