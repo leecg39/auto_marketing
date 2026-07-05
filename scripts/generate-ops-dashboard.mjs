@@ -15,27 +15,39 @@ const DEFAULT_JSON_OUTPUT = path.join(KIT_ROOT, 'dist', 'growth-ops-dashboard.js
 const ACTION_BY_KEY = {
   NEXT_PUBLIC_GTM_ID: {
     title: 'GTM 웹 컨테이너 생성',
-    detail: 'GTM에서 웹 컨테이너를 만든 뒤 GTM-... ID를 사이트 env에 넣습니다.'
+    detail: 'GTM에서 웹 컨테이너를 만든 뒤 GTM-... ID를 사이트 env에 넣습니다.',
+    confirmation_required: true,
+    confirmation_reason: 'Google 계정에 새 GTM 계정/컨테이너를 생성합니다.'
   },
   NEXT_PUBLIC_GA4_MEASUREMENT_ID: {
     title: 'GA4 웹 스트림 생성',
-    detail: 'GA4 속성과 웹 데이터 스트림을 만든 뒤 G-... 측정 ID를 GTM 변수로 연결합니다.'
+    detail: 'GA4 속성과 웹 데이터 스트림을 만든 뒤 G-... 측정 ID를 GTM 변수로 연결합니다.',
+    confirmation_required: true,
+    confirmation_reason: 'Google Analytics 속성 또는 웹 스트림을 생성하거나 수정합니다.'
   },
   NEXT_PUBLIC_APP_URL: {
     title: '운영 자사몰 도메인 확정',
-    detail: 'GA4 웹 스트림, 광고 랜딩 페이지, Meta 도메인 검증에 사용할 https 운영 URL을 env에 넣습니다.'
+    detail: 'GA4 웹 스트림, 광고 랜딩 페이지, Meta 도메인 검증에 사용할 https 운영 URL을 env에 넣습니다.',
+    confirmation_required: false,
+    confirmation_reason: ''
   },
   NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: {
     title: 'Google Ads 구매 전환 액션 생성',
-    detail: '구매 전환 액션을 만든 뒤 conversion label을 운영 env에 넣습니다.'
+    detail: '구매 전환 액션을 만든 뒤 conversion label을 운영 env에 넣습니다.',
+    confirmation_required: true,
+    confirmation_reason: 'Google Ads 계정의 전환 액션을 생성하거나 수정할 수 있습니다.'
   },
   NEXT_PUBLIC_META_PIXEL_ID: {
     title: 'Meta 데이터 세트/픽셀 생성',
-    detail: 'Meta Business Settings에서 데이터 세트 또는 픽셀을 만들고 ID를 운영 env에 넣습니다.'
+    detail: 'Meta Business Settings에서 데이터 세트 또는 픽셀을 만들고 ID를 운영 env에 넣습니다.',
+    confirmation_required: true,
+    confirmation_reason: 'Meta Business 데이터 소스 또는 픽셀을 생성하거나 수정합니다.'
   },
   DOWNSTREAM_CRM_WEBHOOK_URL: {
     title: '이메일/카카오/CRM webhook 연결',
-    detail: '실제 발송툴 webhook URL과 API key를 넣고 테스트 계정으로만 발송 검증합니다.'
+    detail: '실제 발송툴 webhook URL과 API key를 넣고 테스트 계정으로만 발송 검증합니다.',
+    confirmation_required: true,
+    confirmation_reason: '고객 연락처와 마케팅 이벤트를 외부 메시징 공급자로 전송할 수 있습니다.'
   }
 };
 
@@ -149,7 +161,9 @@ function nextActions(blockers) {
     {
       key: 'RUN_GO_LIVE',
       title: '운영 go-live 검증 실행',
-      detail: 'env가 준비됐으므로 render:gtm, full:qa --require-env-ready, audit:completion --strict를 실행합니다.'
+      detail: 'env가 준비됐으므로 render:gtm, full:qa --require-env-ready, audit:completion --strict를 실행합니다.',
+      confirmation_required: false,
+      confirmation_reason: ''
     }
   ];
 }
@@ -254,6 +268,16 @@ function renderHtml(data) {
     .ok { color: var(--ok); }
     .warn { color: var(--warn); }
     .neutral { color: var(--neutral); }
+    .gate {
+      display: inline-flex;
+      margin-top: 4px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #fff7ed;
+      color: var(--warn);
+      font-size: 12px;
+      font-weight: 700;
+    }
     ul { margin: 0; padding-left: 20px; }
     li { margin: 8px 0; line-height: 1.45; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -308,7 +332,7 @@ function renderHtml(data) {
 
     <section class="panel">
       <h2>다음 액션</h2>
-      ${renderList(data.next_actions, (action) => `<li><strong>${escapeHtml(action.title)}</strong><br><span class="muted"><code>${escapeHtml(action.key)}</code> · ${escapeHtml(action.detail)}</span></li>`)}
+      ${renderList(data.next_actions, (action) => `<li><strong>${escapeHtml(action.title)}</strong>${action.confirmation_required ? '<br><span class="gate">실행 전 확인 필요</span>' : ''}<br><span class="muted"><code>${escapeHtml(action.key)}</code> · ${escapeHtml(action.detail)}</span>${action.confirmation_reason ? `<br><span class="muted">${escapeHtml(action.confirmation_reason)}</span>` : ''}</li>`)}
     </section>
 
     <section class="panel">
@@ -383,7 +407,10 @@ async function writeDashboard(options) {
     output,
     json_output: jsonOutput,
     blockers: dashboard.data.summary.blockers,
-    next_actions: dashboard.data.next_actions.map((action) => action.key)
+    next_actions: dashboard.data.next_actions.map((action) => ({
+      key: action.key,
+      confirmation_required: action.confirmation_required
+    }))
   };
 }
 

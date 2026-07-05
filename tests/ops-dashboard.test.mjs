@@ -40,6 +40,9 @@ test('maps missing external env keys to next actions', () => {
     'DOWNSTREAM_CRM_WEBHOOK_URL'
   ]);
   assert.equal(actions[0].title, 'GTM 웹 컨테이너 생성');
+  assert.equal(actions[0].confirmation_required, true);
+  assert.match(actions[0].confirmation_reason, /GTM/);
+  assert.equal(actions.every((action) => action.confirmation_required), true);
 });
 
 test('builds dashboard data from current env and completion audit', () => {
@@ -90,6 +93,7 @@ test('builds dashboard data from current env and completion audit', () => {
     'NEXT_PUBLIC_GA4_MEASUREMENT_ID'
   ]);
   assert.equal(data.next_actions[1].key, 'NEXT_PUBLIC_GA4_MEASUREMENT_ID');
+  assert.equal(data.next_actions[1].confirmation_required, true);
 });
 
 test('renders escaped HTML dashboard', () => {
@@ -112,6 +116,8 @@ test('renders escaped HTML dashboard', () => {
 
   assert.match(html, /Growth Ops Dashboard/);
   assert.match(html, /\/tmp\/&lt;store&gt;/);
+  assert.match(html, /실행 전 확인 필요/);
+  assert.match(html, /Google 계정에 새 GTM 계정\/컨테이너를 생성합니다/);
   assert.doesNotMatch(html, /\/tmp\/<store>/);
 });
 
@@ -166,6 +172,7 @@ test('ops dashboard CLI writer emits HTML and JSON files', async () => {
     const json = JSON.parse(await readFile(jsonOutput, 'utf8'));
     assert.equal(json.summary.blockers.includes('NEXT_PUBLIC_GTM_ID'), true);
     assert.equal(json.next_actions[0].key, 'NEXT_PUBLIC_GTM_ID');
+    assert.equal(json.next_actions[0].confirmation_required, true);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

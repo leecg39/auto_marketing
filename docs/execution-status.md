@@ -50,6 +50,9 @@
   - `/dashboard`에서 남은 외부 계정 액션을 서비스별로 표시
   - production alias `https://auto-marketing-sigma.vercel.app`에서 반영 확인
   - production alias에서 GTM, GA4, Google Ads, Meta Pixel, CRM webhook 5개 액션 모두 `confirmation_required=true` 확인
+- 운영 대시보드 생성기 보강:
+  - `npm run dashboard:ops -- --site-root /path/to/applied-store` 산출물의 `next_actions`에도 `confirmation_required`를 포함
+  - `dist/growth-ops-dashboard.html`에 외부 계정 액션별 `실행 전 확인 필요` 라벨과 확인 사유 표시
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -183,6 +186,7 @@ npm run validate:env -- /path/to/applied-store
   - HTML: `dist/growth-ops-dashboard.html`
   - JSON: `dist/growth-ops-dashboard.json`
   - full QA, 완료 감사, handoff, 현재 env 차단값과 다음 외부 계정 액션을 한 화면으로 요약
+  - GTM, CRM webhook, GA4, Google Ads 구매 라벨, Meta Pixel 액션은 `confirmation_required=true`, 운영 URL 확정 액션은 `confirmation_required=false`로 표시
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
