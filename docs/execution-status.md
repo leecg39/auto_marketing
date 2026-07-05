@@ -40,6 +40,9 @@
   - `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
   - `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`
   - `NEXT_PUBLIC_META_PIXEL_ID`
+- 로컬/후보 사이트 운영값 재검색:
+  - `marketing-automation-kit`와 후보 사이트 `/Users/user01/Documents/프로젝트외/oliveyoung`에서 GA4 측정 ID, Google Ads 구매 라벨, Meta Pixel ID, 실제 downstream CRM webhook URL 후보를 재검색
+  - 발견된 값은 테스트/예시/placeholder뿐이며, Vercel production에 넣을 수 있는 실제 운영값은 없음
 - Vercel production env readiness API 보강:
   - 원본 env 값은 계속 노출하지 않음
   - `next_actions`로 GTM, GA4, Google Ads, Meta Pixel, CRM webhook별 다음 외부 계정 액션을 반환
@@ -355,9 +358,9 @@ npm run stop:local
 
 - Google 계정: `leecg2908@gmail.com`
 - GTM: 계정 생성 폼이 `oliveyoung-shopee`, 국가 `대한민국`, 웹 컨테이너 `oliveyoung-shopee-web`로 준비되어 있으나, 최종 `만들기` 버튼은 누르지 않았습니다.
-- GA4: Analytics가 초기 `측정 시작` 화면에 있어 GA4 속성/웹 스트림/측정 ID가 아직 없습니다.
-- Google Ads: 계정 `446-442-5600`을 확인했고, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600`를 로컬 후보 사이트 env와 Vercel production env에 반영했습니다. 구매 전환 액션 라벨은 아직 없습니다.
-- Meta: Business Settings > Data Sources > Data sets and pixels에서 기존 데이터 세트/픽셀이 없습니다.
+- GA4: Analytics가 초기 `측정 시작` 화면에 있어 GA4 속성/웹 스트림/측정 ID가 아직 없습니다. 새 속성/스트림 생성은 실행 직전 확인이 필요합니다.
+- Google Ads: 계정 `446-442-5600`을 확인했고, `NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-4464425600`를 로컬 후보 사이트 env와 Vercel production env에 반영했습니다. 전환 목록 URL은 새 스마트 캠페인 작성 흐름으로 이동해 기존 구매 전환 액션 라벨을 확인하지 못했습니다. 캠페인 입력/저장은 진행하지 않았습니다.
+- Meta: Events Manager URL은 404로 열려 기존 Pixel ID를 읽지 못했습니다. 이전 확인 기준으로 Business Settings > Data Sources > Data sets and pixels에서 기존 데이터 세트/픽셀이 없습니다.
 - 운영 도메인: Vercel production alias `https://auto-marketing-sigma.vercel.app`를 현재 실행 표면으로 사용 중입니다. 별도 상용 자사몰 도메인을 붙이면 `NEXT_PUBLIC_APP_URL`과 GA4/광고 landing page 기준 URL을 다시 갱신해야 합니다.
 
 외부 계정 리소스 생성, 전환 액션 생성, 픽셀 생성, GTM 게시, 광고 설정 진행은 실제 계정 상태를 바꾸므로 실행 직전 사용자 확인과 운영 도메인이 필요합니다.
