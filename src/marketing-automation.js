@@ -113,15 +113,7 @@
     return String(value);
   }
 
-  function getStorage() {
-    try {
-      if (root.localStorage) {
-        return root.localStorage;
-      }
-    } catch (error) {
-      return null;
-    }
-
+  function memoryStorage() {
     return {
       getItem: function (key) {
         return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
@@ -133,6 +125,19 @@
         delete memoryStore[key];
       }
     };
+  }
+
+  function getStorage() {
+    try {
+      if (root.localStorage) {
+        return root.localStorage;
+      }
+    } catch (error) {
+      // Accessing localStorage can throw (private mode, blocked cookies);
+      // fall through to the in-memory store so the session still works.
+    }
+
+    return memoryStorage();
   }
 
   function readJson(key, fallback) {

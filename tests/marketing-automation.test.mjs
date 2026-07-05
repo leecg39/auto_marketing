@@ -53,6 +53,38 @@ test('captures UTM attribution and initializes denied consent by default', () =>
   assert.equal(globalThis.dataLayer.length >= 1, true);
 });
 
+test('falls back to in-memory storage when localStorage access throws', () => {
+  resetBrowser();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get() {
+      throw new Error('SecurityError: access denied');
+    }
+  });
+
+  try {
+    const result = MarketingAutomation.init();
+    assert.equal(result.initialized, true);
+
+    MarketingAutomation.setConsent({ analytics: true, ads: true, marketing: true, crm: true });
+    assert.equal(MarketingAutomation.getConsent().crm, true);
+
+    const first = MarketingAutomation.trackPurchase({
+      transaction_id: 'ORDER-MEM-1',
+      items: [{ item_id: 'SKU_001', item_name: 'Product name', price: 1000, quantity: 1 }]
+    });
+    const second = MarketingAutomation.trackPurchase({
+      transaction_id: 'ORDER-MEM-1',
+      items: [{ item_id: 'SKU_001', item_name: 'Product name', price: 1000, quantity: 1 }]
+    });
+
+    assert.equal(first.event, 'purchase');
+    assert.equal(second.skipped, true);
+  } finally {
+    delete globalThis.localStorage;
+  }
+});
+
 test('initializes without crashing when the query string has malformed encoding', () => {
   resetBrowser({ search: '?utm_source=%E0%A4%A&fbclid=abc%' });
 
