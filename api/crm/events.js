@@ -81,6 +81,7 @@ function validatePayload(payload, flowByEvent) {
 async function forwardToDownstream(payload) {
   const downstreamUrl = process.env.DOWNSTREAM_CRM_WEBHOOK_URL || '';
   const downstreamApiKey = process.env.DOWNSTREAM_CRM_API_KEY || '';
+  const downstreamTimeoutMs = Number(process.env.DOWNSTREAM_CRM_TIMEOUT_MS || 5000);
 
   if (!downstreamUrl) {
     return {
@@ -91,19 +92,34 @@ async function forwardToDownstream(payload) {
     };
   }
 
-  const response = await fetch(downstreamUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(downstreamApiKey ? { Authorization: `Bearer ${downstreamApiKey}` } : {})
-    },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const response = await fetch(downstreamUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(downstreamApiKey ? { Authorization: `Bearer ${downstreamApiKey}` } : {})
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(downstreamTimeoutMs)
+    });
 
-  return {
-    ok: response.ok,
-    status: response.status
-  };
+    return {
+      ok: response.ok,
+      status: response.status
+    };
+  } catch (error) {
+    console.error(JSON.stringify({
+      downstream_delivery_failed: true,
+      reason: error.name === 'TimeoutError' ? 'downstream_timeout' : 'downstream_unreachable',
+      message: error.message
+    }));
+
+    return {
+      ok: false,
+      status: 0,
+      error: error.name === 'TimeoutError' ? 'downstream_timeout' : 'downstream_unreachable'
+    };
+  }
 }
 
 async function handler(request, response) {

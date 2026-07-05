@@ -4,6 +4,7 @@ import { FLOW_BY_EVENT, buildAutomationActions } from './automation-flow-engine.
 const PORT = Number(process.env.PORT || 8787);
 const DOWNSTREAM_CRM_WEBHOOK_URL = process.env.DOWNSTREAM_CRM_WEBHOOK_URL || '';
 const DOWNSTREAM_CRM_API_KEY = process.env.DOWNSTREAM_CRM_API_KEY || '';
+const DOWNSTREAM_CRM_TIMEOUT_MS = Number(process.env.DOWNSTREAM_CRM_TIMEOUT_MS || 5000);
 
 const REQUIRED_FIELDS = ['event_name', 'occurred_at'];
 
@@ -82,19 +83,34 @@ async function forwardToDownstream(payload) {
     return { skipped: true, reason: 'fetch_unavailable' };
   }
 
-  const response = await fetch(DOWNSTREAM_CRM_WEBHOOK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(DOWNSTREAM_CRM_API_KEY ? { Authorization: `Bearer ${DOWNSTREAM_CRM_API_KEY}` } : {})
-    },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const response = await fetch(DOWNSTREAM_CRM_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(DOWNSTREAM_CRM_API_KEY ? { Authorization: `Bearer ${DOWNSTREAM_CRM_API_KEY}` } : {})
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(DOWNSTREAM_CRM_TIMEOUT_MS)
+    });
 
-  return {
-    ok: response.ok,
-    status: response.status
-  };
+    return {
+      ok: response.ok,
+      status: response.status
+    };
+  } catch (error) {
+    console.error(JSON.stringify({
+      downstream_delivery_failed: true,
+      reason: error.name === 'TimeoutError' ? 'downstream_timeout' : 'downstream_unreachable',
+      message: error.message
+    }));
+
+    return {
+      ok: false,
+      status: 0,
+      error: error.name === 'TimeoutError' ? 'downstream_timeout' : 'downstream_unreachable'
+    };
+  }
 }
 
 async function handleCrmEvent(request, response) {
@@ -138,24 +154,33 @@ async function handleCrmEvent(request, response) {
 }
 
 const server = createServer(async (request, response) => {
-  const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+  try {
+    const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
-  if (request.method === 'OPTIONS') {
-    sendJson(response, 204, {});
-    return;
+    if (request.method === 'OPTIONS') {
+      sendJson(response, 204, {});
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/healthz') {
+      sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/crm/events') {
+      await handleCrmEvent(request, response);
+      return;
+    }
+
+    sendJson(response, 404, { ok: false, errors: ['not_found'] });
+  } catch (error) {
+    console.error(JSON.stringify({ unhandled_request_error: true, message: error.message }));
+    if (!response.headersSent) {
+      sendJson(response, 500, { ok: false, errors: ['internal_error'] });
+    } else {
+      response.end();
+    }
   }
-
-  if (request.method === 'GET' && url.pathname === '/healthz') {
-    sendJson(response, 200, { ok: true });
-    return;
-  }
-
-  if (request.method === 'POST' && url.pathname === '/crm/events') {
-    await handleCrmEvent(request, response);
-    return;
-  }
-
-  sendJson(response, 404, { ok: false, errors: ['not_found'] });
 });
 
 server.listen(PORT, () => {
