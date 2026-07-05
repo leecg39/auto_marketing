@@ -70,6 +70,7 @@ npm run verify:local
 npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3000
 npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
+npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 ```
 
@@ -81,6 +82,7 @@ GitHub Actions의 `CI` 워크플로도 push와 pull request에서 `check`, `test
 cd marketing-automation-kit
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
+npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
 ```
 
 수동으로 나누어 실행하려면 아래 명령을 사용합니다.
@@ -89,6 +91,7 @@ npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-sit
 cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
+npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
@@ -365,6 +368,7 @@ npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv -
 ```bash
 cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run verify:gtm
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run apply:env -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env --dry-run
@@ -399,6 +403,9 @@ npm run verify:browser
 
 ```bash
 npm run verify:site -- --site-url http://127.0.0.1:3000
+npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
+npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 ```
 
 이 검증은 `/assets/marketing-automation.js`, `/api/crm/events`, `/`, `/signup`, `/margin-calculator`에서 SDK, consent UI, CRM 동의/거부 동작을 확인합니다.
+`verify:prod-site`는 `npm run build` 후 `npm run start`로 production runtime을 띄우고 같은 SDK/consent/CRM/event probe를 실행합니다.

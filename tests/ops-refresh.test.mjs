@@ -20,6 +20,7 @@ test('parses ops refresh arguments', () => {
     '--start-site',
     '--require-env-ready',
     '--site-event-probe',
+    '--site-production-probe',
     '--site-port',
     '3200',
     '--timeout-ms',
@@ -33,6 +34,7 @@ test('parses ops refresh arguments', () => {
   assert.equal(parsed.startSite, true);
   assert.equal(parsed.requireEnvReady, true);
   assert.equal(parsed.siteEventProbe, true);
+  assert.equal(parsed.siteProductionProbe, true);
   assert.equal(parsed.sitePort, 3200);
   assert.equal(parsed.timeoutMs, 1000);
   assert.equal(parsed.report, '/tmp/report.json');
@@ -60,12 +62,14 @@ test('passes site event probe flag through to full QA', () => {
   const options = parseArgs([
     '--site-root',
     '/tmp/store',
-    '--site-event-probe'
+    '--site-event-probe',
+    '--site-production-probe'
   ]);
   const steps = buildSteps(options);
   const fullQa = steps.find((step) => step.id === 'full_qa');
 
   assert.equal(fullQa.args.includes('--site-event-probe'), true);
+  assert.equal(fullQa.args.includes('--site-production-probe'), true);
 });
 
 test('extracts first JSON object from command stdout', () => {

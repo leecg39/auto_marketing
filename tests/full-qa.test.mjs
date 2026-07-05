@@ -33,6 +33,7 @@ test('parses full QA arguments and builds expected steps', () => {
     '--site-url',
     'http://127.0.0.1:3100',
     '--site-event-probe',
+    '--site-production-probe',
     '--skip-live',
     '--report',
     '/tmp/report.json'
@@ -42,9 +43,13 @@ test('parses full QA arguments and builds expected steps', () => {
   assert.equal(options.siteRoot, '/tmp/store');
   assert.equal(options.live, false);
   assert.equal(options.siteEventProbe, true);
+  assert.equal(options.siteProductionProbe, true);
   assert.equal(options.report, '/tmp/report.json');
   assert.equal(steps.some((step) => step.id === 'kit_check'), true);
   assert.equal(steps.some((step) => step.id === 'local_e2e'), false);
+  assert.equal(steps.some((step) => step.id === 'site_production_runtime'), true);
+  assert.equal(steps.find((step) => step.id === 'site_production_runtime').args.includes('verify:prod-site'), true);
+  assert.equal(steps.find((step) => step.id === 'site_production_runtime').args.includes('--event-probe'), true);
   assert.equal(steps.some((step) => step.id === 'site_runtime'), true);
   assert.equal(steps.find((step) => step.id === 'site_runtime').args.includes('--event-probe'), true);
 });

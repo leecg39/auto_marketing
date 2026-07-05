@@ -92,6 +92,7 @@ function parseArgs(args) {
     startSite: false,
     requireEnvReady: false,
     siteEventProbe: false,
+    siteProductionProbe: false,
     skipFullQa: false,
     openDashboard: false
   };
@@ -126,6 +127,10 @@ function parseArgs(args) {
     }
     if (key === 'site-event-probe') {
       parsed.siteEventProbe = true;
+      continue;
+    }
+    if (key === 'site-production-probe') {
+      parsed.siteProductionProbe = true;
       continue;
     }
     if (key === 'skip-full-qa') {
@@ -205,6 +210,9 @@ function buildSteps(options) {
     }
     if (options.siteEventProbe) {
       args.push('--site-event-probe');
+    }
+    if (options.siteProductionProbe) {
+      args.push('--site-production-probe');
     }
 
     steps.push({
@@ -387,6 +395,7 @@ function printHelp() {
     '  --timeout-ms <number>    Per-command timeout passed to full QA, default 240000',
     '  --require-env-ready      Treat missing operating env as full QA failure',
     '  --site-event-probe       Execute SDK event probe during applied store runtime QA',
+    '  --site-production-probe  Execute SDK/runtime QA against npm run start after site build',
     '  --skip-full-qa           Regenerate handoff/external setup/audit/dashboard from existing QA evidence',
     '  --open-dashboard         Open dist/growth-ops-dashboard.html after refresh',
     '  --report <path>          JSON refresh report output'

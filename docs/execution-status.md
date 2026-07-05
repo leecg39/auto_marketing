@@ -28,6 +28,7 @@ cd marketing-automation-kit
 npm run ops:refresh -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
 npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --timeout-ms 240000
 npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000
+npm run full:qa -- --site-root /path/to/applied-store --skip-live --site-port 3101 --site-event-probe --site-production-probe --timeout-ms 240000
 npm run handoff:deployment -- --site-root /path/to/applied-store
 npm run handoff:external -- --site-root /path/to/applied-store
 npm run apply:env -- --site-root /path/to/applied-store --env-file /path/to/marketing-production.env --dry-run
@@ -41,6 +42,7 @@ npm run verify:local
 npm run verify:browser
 npm run verify:site -- --site-url http://127.0.0.1:3100
 npm run verify:site -- --site-url http://127.0.0.1:3100 --event-probe
+npm run verify:prod-site -- --site-root /path/to/applied-store --site-port 3101 --timeout-ms 240000 --build --event-probe
 npm run verify:gtm
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 npm run generate:gtm -- --public-id GTM-XXXXXXX
@@ -60,6 +62,13 @@ npm run validate:env -- /path/to/applied-store
   - `deployment_ready`: `false`
   - 통과: `14`, 경고: `2`, 실패: `0`
   - GTM import 검증: `77/77` 체크 통과, 태그 12개/트리거 7개/변수 14개
+  - 경고 항목: 운영 도메인/GTM/GA4/광고/CRM env 값 미준비, 운영값 기반 GTM import 렌더링 대기
+- `npm run full:qa -- --site-root /path/to/applied-store --skip-live --site-port 3101 --site-event-probe --site-production-probe --timeout-ms 240000`: 통과
+  - 리포트: `dist/full-qa-report.json`
+  - `local_qa_ok`: `true`
+  - `deployment_ready`: `false`
+  - 통과: `10`, 경고: `2`, 실패: `0`
+  - 추가 통과 항목: `site_production_runtime`
   - 경고 항목: 운영 도메인/GTM/GA4/광고/CRM env 값 미준비, 운영값 기반 GTM import 렌더링 대기
 - `npm run handoff:deployment -- --site-root /path/to/applied-store`: 통과
   - 문서: `dist/deployment-handoff.md`
@@ -87,8 +96,8 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
-- `npm test`: 84개 테스트 통과
-- `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
+- `npm test`: 87개 테스트 통과
+- `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트, production runtime QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
 - `npm run verify:browser`: headless Chrome에서 데모 autorun 통과
@@ -108,6 +117,13 @@ npm run validate:env -- /path/to/applied-store
   - `duplicate_transaction_id` 중복 구매 방지 확인
   - dataLayer 개인정보 미포함 확인
   - event probe는 CRM consent를 `false`로 고정해 외부 발송 없이 dataLayer만 검증
+- `npm run verify:prod-site -- --site-root /path/to/applied-store --site-port 3101 --timeout-ms 240000 --build --event-probe`: 실제 후보 사이트 production runtime QA 통과
+  - 리포트: `dist/production-runtime-report.json`
+  - 요약: `passed=3`, `failed=0`
+  - `npm run build`: 통과
+  - `npm run start -- --hostname 127.0.0.1 --port 3101`: 준비 상태 `200 OK`
+  - production runtime event probe: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `sign_up`, `login`, `generate_lead`
+  - 구매 중복 방지와 dataLayer 개인정보 미포함 확인
 - `npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv`: 예제 주문/GA4 매출 대조 통과
   - 전체 주문 매출: `280000`
   - 전체 GA4 매출: `276000`
@@ -159,6 +175,7 @@ npm run stop:local
 - 전체 요구사항 완료 감사 명령: `npm run audit:completion -- --site-root /path/to/store`
 - 운영 환경값 readiness 검증 명령: `npm run validate:env -- /path/to/store`
 - 전체 로컬/사이트 QA 오케스트레이터 명령: `npm run full:qa -- --site-root /path/to/store --start-local --start-site --site-port 3100`
+- production runtime QA 명령: `npm run verify:prod-site -- --site-root /path/to/store --build --event-probe`
 - 운영 전환 일괄 실행 명령: `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env`
 - 운영 상태 일괄 갱신 명령: `npm run ops:refresh -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - 운영 계정값 handoff 문서 생성 명령: `npm run handoff:deployment -- --site-root /path/to/store`

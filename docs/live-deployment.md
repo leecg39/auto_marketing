@@ -87,6 +87,7 @@ CRM 수신 서버는 이벤트별로 `automation_actions`를 함께 계산합니
 
 ```bash
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
 ```
 
 수동으로 나누어 실행해야 할 때는 아래 명령을 사용합니다.
@@ -94,6 +95,8 @@ npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-sit
 ```bash
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
+npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
+npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
@@ -130,14 +133,15 @@ npm run audit:completion -- --site-root /path/to/your-store --strict
 1. `npm test`와 `npm run check`를 통과시킵니다.
 2. `npm run verify:local`로 로컬 데모, CRM 이벤트 플로우, 자동화 액션, downstream webhook 전달을 확인합니다.
 3. `npm run verify:browser`로 headless Chrome에서 dataLayer 이벤트, CRM 플로우, downstream 전달, 구매 중복 방지, 개인정보 제거를 확인합니다.
-4. 자사몰 dev/prod 서버를 띄운 뒤 `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`로 SDK, consent UI, CRM route, 실제 dataLayer 이벤트 7개, 구매 중복 방지, 개인정보 제거를 확인합니다.
-5. `npm run audit:site -- /path/to/your-store`에서 SDK, Provider, CRM route, 7개 이벤트 지원이 확인됩니다.
-6. `npm run validate:env -- /path/to/your-store`에서 `ready: true`가 나옵니다.
-7. `npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env`가 통과합니다.
-8. `npm run audit:completion -- --site-root /path/to/your-store --strict`에서 완료 판정이 `true`입니다.
-9. 운영 배포 후 GTM Preview와 GA4 DebugView에서 이벤트를 확인합니다.
-10. 주문 DB 매출과 GA4 매출을 48시간 뒤 export해서 `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`로 비교합니다.
-11. Google Ads/Meta 테스트 도구에서 구매 전환 수신을 확인합니다.
+4. 자사몰 dev 서버를 띄운 뒤 `npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe`로 SDK, consent UI, CRM route, 실제 dataLayer 이벤트 7개, 구매 중복 방지, 개인정보 제거를 확인합니다.
+5. `npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe`로 `next start` production runtime에서도 같은 검증이 통과하는지 확인합니다.
+6. `npm run audit:site -- /path/to/your-store`에서 SDK, Provider, CRM route, 7개 이벤트 지원이 확인됩니다.
+7. `npm run validate:env -- /path/to/your-store`에서 `ready: true`가 나옵니다.
+8. `npm run go:live -- --site-root /path/to/your-store --env-file /path/to/marketing-production.env`가 통과합니다.
+9. `npm run audit:completion -- --site-root /path/to/your-store --strict`에서 완료 판정이 `true`입니다.
+10. 운영 배포 후 GTM Preview와 GA4 DebugView에서 이벤트를 확인합니다.
+11. 주문 DB 매출과 GA4 매출을 48시간 뒤 export해서 `npm run reconcile:revenue -- --orders exports/orders.csv --ga4 exports/ga4.csv --threshold 0.05`로 비교합니다.
+12. Google Ads/Meta 테스트 도구에서 구매 전환 수신을 확인합니다.
 
 ## 완료 기준
 

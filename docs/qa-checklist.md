@@ -15,6 +15,7 @@
 - [ ] `npm run validate:env -- /path/to/store`에서 운영 값 readiness가 `true`다.
 - [ ] `npm run verify:browser`에서 headless Chrome 데모 QA가 통과한다.
 - [ ] `npm run verify:site -- --site-url http://127.0.0.1:3000`에서 실제 사이트 SDK, consent UI, CRM route 런타임 QA가 통과한다.
+- [ ] `npm run verify:prod-site -- --site-root /path/to/store --build --event-probe`에서 production runtime 이벤트 probe가 통과한다.
 - [ ] `npm run verify:gtm`에서 GTM import 태그/트리거/변수/동의 조건 검증이 통과한다.
 - [ ] GTM 컨테이너 ID가 운영 컨테이너로 설정되어 있다.
 - [ ] GA4 측정 ID가 운영 속성으로 설정되어 있다.

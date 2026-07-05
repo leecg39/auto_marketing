@@ -91,6 +91,7 @@ function parseArgs(args) {
     startSite: false,
     requireEnvReady: false,
     siteEventProbe: false,
+    siteProductionProbe: false,
     sitePort: DEFAULT_SITE_PORT,
     timeoutMs: DEFAULT_TIMEOUT_MS,
     report: DEFAULT_REPORT
@@ -130,6 +131,10 @@ function parseArgs(args) {
     }
     if (key === 'site-event-probe') {
       parsed.siteEventProbe = true;
+      continue;
+    }
+    if (key === 'site-production-probe') {
+      parsed.siteProductionProbe = true;
       continue;
     }
     if (key === 'help') {
@@ -323,6 +328,35 @@ function buildSteps(options) {
         fatal: true
       }
     );
+
+    if (options.siteProductionProbe) {
+      const siteProductionArgs = [
+        'run',
+        'verify:prod-site',
+        '--',
+        '--site-root',
+        options.siteRoot,
+        '--site-port',
+        String(options.sitePort),
+        '--timeout-ms',
+        String(options.timeoutMs)
+      ];
+      if (options.siteEventProbe) {
+        siteProductionArgs.push('--event-probe');
+      }
+
+      steps.push({
+        id: 'site_production_runtime',
+        label: options.siteEventProbe
+          ? 'Applied store production runtime SDK, event probe, consent UI, and CRM route QA'
+          : 'Applied store production runtime SDK, consent UI, and CRM route QA',
+        cwd: KIT_ROOT,
+        command: 'npm',
+        args: siteProductionArgs,
+        fatal: true,
+        expectJson: true
+      });
+    }
   }
 
   if (options.siteChecks && options.siteUrl) {
@@ -629,6 +663,7 @@ function usage() {
     '  --skip-site             Skip applied store checks.',
     '  --require-env-ready     Treat missing GTM/GA4/Ads/CRM env values as a failure.',
     '  --site-event-probe      Execute SDK event probe during applied store runtime QA.',
+    '  --site-production-probe Execute SDK/runtime QA against npm run start after site build.',
     '  --report FILE           Write JSON report. Default: dist/full-qa-report.json'
   ].join('\n');
 }
