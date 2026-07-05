@@ -204,6 +204,14 @@
     return normalized;
   }
 
+  function safeDecode(value) {
+    try {
+      return decodeURIComponent(value);
+    } catch (error) {
+      return value;
+    }
+  }
+
   function parseQuery(search) {
     var query = {};
     var source = String(search || '').replace(/^\?/, '');
@@ -213,8 +221,8 @@
 
     source.split('&').forEach(function (part) {
       var pair = part.split('=');
-      var key = decodeURIComponent(pair[0] || '');
-      var value = decodeURIComponent((pair[1] || '').replace(/\+/g, ' '));
+      var key = safeDecode(pair[0] || '');
+      var value = safeDecode((pair[1] || '').replace(/\+/g, ' '));
       if (key) {
         query[key] = value;
       }

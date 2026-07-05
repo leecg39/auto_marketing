@@ -53,6 +53,15 @@ test('captures UTM attribution and initializes denied consent by default', () =>
   assert.equal(globalThis.dataLayer.length >= 1, true);
 });
 
+test('initializes without crashing when the query string has malformed encoding', () => {
+  resetBrowser({ search: '?utm_source=%E0%A4%A&fbclid=abc%' });
+
+  const result = MarketingAutomation.init();
+
+  assert.equal(result.initialized, true);
+  assert.equal(result.attribution.last_touch.fbclid, 'abc%');
+});
+
 test('pushes GA4 ecommerce events without contact PII', () => {
   resetBrowser();
   MarketingAutomation.init({ consent: { analytics: true, ads: false, marketing: false, crm: false } });
