@@ -171,11 +171,18 @@ function buildSetupPlan(envReport) {
       .filter((item) => item.required && !item.ok)
       .map((item) => item.key);
 
+    const urlDiscovery = task.id === 'production_domain' ? envReport.url_discovery || null : null;
+
     return {
       ...task,
       env,
       status: blocking_keys.length ? 'blocked_external' : 'ready',
-      blocking_keys
+      blocking_keys,
+      ...(urlDiscovery ? {
+        suggested_url: urlDiscovery.suggested_url,
+        discovered_urls: urlDiscovery.candidates || [],
+        discovery_next_step: urlDiscovery.next_step
+      } : {})
     };
   });
 
@@ -200,6 +207,30 @@ function renderBullets(items) {
   return items.map((item) => `- ${item}`).join('\n');
 }
 
+function renderDiscoveredUrls(task) {
+  if (!Array.isArray(task.discovered_urls)) {
+    return '';
+  }
+
+  if (!task.discovered_urls.length) {
+    return [
+      '',
+      '탐색된 운영 URL:',
+      '',
+      '- 없음'
+    ].join('\n');
+  }
+
+  return [
+    '',
+    '탐색된 운영 URL:',
+    '',
+    ...task.discovered_urls.map((candidate) => `- \`${candidate.url}\`: ${candidate.status} (${candidate.source})`),
+    task.suggested_url ? `- 추천값: \`${task.suggested_url}\`` : '',
+    task.discovery_next_step ? `- 다음 단계: ${task.discovery_next_step}` : ''
+  ].filter(Boolean).join('\n');
+}
+
 function renderMarkdown(report) {
   const blocking = report.plan.blocking_keys.length
     ? report.plan.blocking_keys.map((key) => `\`${key}\``).join(', ')
@@ -215,6 +246,7 @@ function renderMarkdown(report) {
     '수집/확인할 env:',
     '',
     renderEnvList(task.env),
+    renderDiscoveredUrls(task),
     '',
     '실행 순서:',
     '',

@@ -105,7 +105,7 @@ npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트와 수집할 값은 `dist/external-account-setup.md`에서 확인합니다.
+handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트, 수집할 값, 운영 URL 탐색 결과는 `dist/external-account-setup.md`에서 확인합니다.
 
 운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 출력에는 값이 마스킹됩니다.
 

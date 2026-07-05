@@ -109,7 +109,7 @@ npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-운영 대시보드는 `dist/growth-ops-dashboard.html`에 생성됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`에 생성됩니다. 운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
+운영 대시보드는 `dist/growth-ops-dashboard.html`에 생성됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`에 생성되며, 운영 URL 후보 탐색 결과도 함께 표시합니다. 운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
 
 ```bash
 cp examples/marketing-production.env.example /path/to/marketing-production.env

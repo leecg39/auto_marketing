@@ -69,6 +69,7 @@ npm run validate:env -- /path/to/applied-store
   - 문서: `dist/external-account-setup.md`
   - JSON: `dist/external-account-setup.json`
   - 외부 실행 항목: 운영 도메인, GTM 컨테이너, GA4 웹 스트림, Google Ads 구매 전환, Meta 픽셀, CRM webhook
+  - 운영 URL 탐색 결과: 후보 사이트 env에서 `http://localhost:3000`만 발견, 운영 HTTPS URL 추천값 없음
   - 모든 계정 리소스 생성/게시/실제 발송은 Computer Use 실행 직전 사용자 확인 게이트 포함
 - `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 미준비로 예상대로 미생성
   - 출력: `ok=false`
@@ -86,7 +87,7 @@ npm run validate:env -- /path/to/applied-store
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 미준비로 `ok=false`
-- `npm test`: 82개 테스트 통과
+- `npm test`: 84개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, 외부 계정 실행 체크리스트 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
@@ -118,6 +119,7 @@ npm run validate:env -- /path/to/applied-store
   - GA4 이벤트 7개, Google Ads 구매 전환, Meta Pixel 3개, Custom Event trigger 7개, DLV 10개, Consent Mode 요구사항 확인
   - contact PII 변수/파라미터 미포함 확인
 - `npm run validate:env -- /path/to/applied-store`: `.env.local` 로드, 운영 도메인/GTM/GA4/광고/CRM 값 미준비 확인
+  - 운영 URL 탐색: `env:NEXT_PUBLIC_APP_URL=http://localhost:3000`만 발견, `suggested_url` 없음
 
 실행 중인 서버를 종료하려면:
 

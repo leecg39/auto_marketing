@@ -68,6 +68,28 @@ const REQUIREMENTS = [
   }
 ];
 
+const URL_ENV_KEYS = [
+  'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_STORE_URL',
+  'SITE_URL',
+  'APP_URL',
+  'VERCEL_PROJECT_PRODUCTION_URL',
+  'VERCEL_URL',
+  'URL'
+];
+
+const URL_SCAN_FILES = [
+  'package.json',
+  'next.config.js',
+  'next.config.mjs',
+  'next.config.ts',
+  'vercel.json',
+  'netlify.toml',
+  'wrangler.toml',
+  'firebase.json'
+];
+
 function parseDotenv(text) {
   const values = {};
   const lines = text.split(/\r?\n/);
@@ -103,6 +125,111 @@ async function readEnvFile(root, fileName) {
   } catch {
     return null;
   }
+}
+
+async function readTextIfExists(file) {
+  try {
+    return await readFile(file, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function normalizeUrl(rawValue) {
+  const value = String(rawValue || '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\/+$/, '');
+
+  if (!value) {
+    return '';
+  }
+
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(value)) {
+    return `https://${value}`;
+  }
+
+  return value;
+}
+
+function classifyUrl(rawValue) {
+  const url = normalizeUrl(rawValue);
+
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return { url, status: 'invalid' };
+  }
+
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::|\/|$)/i.test(url)) {
+    return { url, status: 'local' };
+  }
+
+  if (/^https:\/\/(?:your-store\.example|example\.com)(?:\/|$)/i.test(url)) {
+    return { url, status: 'placeholder' };
+  }
+
+  if (!/^https:\/\//i.test(url)) {
+    return { url, status: 'non_https' };
+  }
+
+  return { url, status: 'ready' };
+}
+
+function addUrlCandidate(candidates, source, value) {
+  const classified = classifyUrl(value);
+  if (!classified.url) {
+    return;
+  }
+
+  if (candidates.some((candidate) => candidate.url === classified.url && candidate.source === source)) {
+    return;
+  }
+
+  candidates.push({
+    source,
+    url: classified.url,
+    status: classified.status
+  });
+}
+
+function extractUrls(text) {
+  return Array.from(text.matchAll(/https?:\/\/[^\s"'`),\]}<>]+/gi))
+    .map((match) => match[0].replace(/[.,;:]+$/, ''));
+}
+
+async function discoverStorefrontUrls(root, values = {}) {
+  const candidates = [];
+
+  for (const key of URL_ENV_KEYS) {
+    addUrlCandidate(candidates, `env:${key}`, values[key]);
+  }
+
+  const packageText = await readTextIfExists(path.join(root, 'package.json'));
+  if (packageText) {
+    try {
+      const packageJson = JSON.parse(packageText);
+      addUrlCandidate(candidates, 'package.json:homepage', packageJson.homepage);
+    } catch {
+      // Ignore malformed package.json here. Env validation will surface other failures.
+    }
+  }
+
+  for (const fileName of URL_SCAN_FILES.filter((fileName) => fileName !== 'package.json')) {
+    const text = await readTextIfExists(path.join(root, fileName));
+    for (const url of extractUrls(text)) {
+      addUrlCandidate(candidates, fileName, url);
+    }
+  }
+
+  const ready = candidates.filter((candidate) => candidate.status === 'ready');
+
+  return {
+    ready: ready.length > 0,
+    suggested_url: ready[0]?.url || '',
+    candidates,
+    next_step: ready.length
+      ? `NEXT_PUBLIC_APP_URL에 ${ready[0].url}를 넣고 validate:env를 다시 실행하세요.`
+      : '운영 HTTPS URL을 찾지 못했습니다. 배포 플랫폼에서 production domain을 확정한 뒤 NEXT_PUBLIC_APP_URL에 넣으세요.'
+  };
 }
 
 async function loadEnv(root, envFiles = DEFAULT_ENV_FILES) {
@@ -177,6 +304,7 @@ async function validateDeploymentEnv(root, options = {}) {
   const env = await loadEnv(root, options.envFiles || DEFAULT_ENV_FILES);
   const results = REQUIREMENTS.map((requirement) => classifyRequirement(requirement, env.values));
   const summary = summarize(results);
+  const urlDiscovery = await discoverStorefrontUrls(root, env.values);
 
   return {
     root,
@@ -184,6 +312,7 @@ async function validateDeploymentEnv(root, options = {}) {
     ready: summary.ready,
     summary,
     checks: results,
+    url_discovery: urlDiscovery,
     next_step: summary.ready
       ? '운영 GTM/GA4/광고/CRM 값이 준비되어 있습니다. GTM Preview와 GA4 DebugView 검증으로 넘어가세요.'
       : 'missing/placeholders/invalid 항목을 실제 운영 값으로 채운 뒤 다시 검증하세요.'
@@ -208,4 +337,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   await main();
 }
 
-export { REQUIREMENTS, parseDotenv, validateDeploymentEnv };
+export { REQUIREMENTS, classifyUrl, discoverStorefrontUrls, parseDotenv, validateDeploymentEnv };

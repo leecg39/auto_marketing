@@ -8,7 +8,12 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import { buildContainerImport } from '../scripts/generate-gtm-import.mjs';
-import { parseDotenv, validateDeploymentEnv } from '../scripts/validate-deployment-env.mjs';
+import {
+  classifyUrl,
+  discoverStorefrontUrls,
+  parseDotenv,
+  validateDeploymentEnv
+} from '../scripts/validate-deployment-env.mjs';
 
 const blueprint = JSON.parse(await readFile(new URL('../config/gtm-workspace-blueprint.json', import.meta.url), 'utf8'));
 const execFileAsync = promisify(execFile);
@@ -110,6 +115,41 @@ test('deployment env validator flags placeholders and missing downstream CRM', a
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
+});
+
+test('deployment env validator discovers production storefront URL candidates', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-url-'));
+
+  try {
+    await writeFile(path.join(tmp, '.env.local'), 'NEXT_PUBLIC_APP_URL=http://localhost:3000\n');
+    await writeFile(path.join(tmp, 'package.json'), JSON.stringify({
+      homepage: 'https://store.example.test'
+    }));
+    await writeFile(path.join(tmp, 'README.md'), 'Open http://localhost:3000 for local development.\n');
+
+    const report = await validateDeploymentEnv(tmp);
+
+    assert.equal(report.url_discovery.ready, true);
+    assert.equal(report.url_discovery.suggested_url, 'https://store.example.test');
+    assert.equal(report.url_discovery.candidates.some((candidate) => candidate.status === 'local'), true);
+    assert.equal(report.summary.placeholders.includes('NEXT_PUBLIC_APP_URL'), true);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('storefront URL discovery classifies local, placeholder, and ready URLs', async () => {
+  const discovery = await discoverStorefrontUrls('/tmp/not-a-store', {
+    NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+    VERCEL_PROJECT_PRODUCTION_URL: 'my-store.example.test'
+  });
+
+  assert.deepEqual(classifyUrl('https://your-store.example'), {
+    url: 'https://your-store.example',
+    status: 'placeholder'
+  });
+  assert.equal(discovery.ready, true);
+  assert.equal(discovery.suggested_url, 'https://my-store.example.test');
 });
 
 test('GTM generator CLI writes an import file', async () => {

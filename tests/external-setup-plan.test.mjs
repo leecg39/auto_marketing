@@ -39,7 +39,14 @@ test('builds setup tasks from deployment env status', () => {
       { key: 'NEXT_PUBLIC_GTM_ID', label: 'GTM web container ID', status: 'missing', ok: false },
       { key: 'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID', label: 'Google Ads conversion ID', status: 'ready', ok: true },
       { key: 'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL', label: 'Google Ads purchase label', status: 'missing', ok: false }
-    ]
+    ],
+    url_discovery: {
+      suggested_url: 'https://store.example.test',
+      candidates: [
+        { source: 'package.json:homepage', url: 'https://store.example.test', status: 'ready' }
+      ],
+      next_step: 'NEXT_PUBLIC_APP_URL에 https://store.example.test를 넣고 validate:env를 다시 실행하세요.'
+    }
   });
   const domain = plan.tasks.find((task) => task.id === 'production_domain');
   const ads = plan.tasks.find((task) => task.id === 'google_ads_purchase');
@@ -48,6 +55,8 @@ test('builds setup tasks from deployment env status', () => {
   assert.equal(plan.blocking_keys.includes('NEXT_PUBLIC_APP_URL'), true);
   assert.equal(plan.blocking_keys.includes('NEXT_PUBLIC_GTM_ID'), true);
   assert.equal(domain.status, 'blocked_external');
+  assert.equal(domain.suggested_url, 'https://store.example.test');
+  assert.equal(domain.discovered_urls[0].source, 'package.json:homepage');
   assert.deepEqual(ads.blocking_keys, [
     'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
     'NEXT_PUBLIC_APP_URL'
@@ -68,6 +77,7 @@ test('renders external setup markdown with confirmation gates', async () => {
     assert.equal(report.plan.blocking_keys.includes('NEXT_PUBLIC_APP_URL'), true);
     assert.match(markdown, /외부 계정 실행 체크리스트/);
     assert.match(markdown, /Computer Use 확인 게이트/);
+    assert.match(markdown, /탐색된 운영 URL/);
     assert.match(markdown, /tagmanager\.google\.com/);
     assert.match(markdown, /NEXT_PUBLIC_APP_URL/);
   } finally {
