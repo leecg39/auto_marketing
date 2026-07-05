@@ -16,6 +16,7 @@
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
 - `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `scripts/reconcile-revenue.mjs`: 주문 DB와 GA4 매출 CSV 일 단위 대조기
+- `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 
 ## 1. 사이트 공통 레이아웃에 SDK 추가
 
@@ -78,9 +79,10 @@ GitHub Actions의 `CI` 워크플로도 push와 pull request에서 `check`, `test
 cd marketing-automation-kit
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run audit:completion -- --site-root /path/to/your-store
+npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다.
+전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다.
 
 운영 계정값을 입력할 사람에게 넘길 체크리스트와 env 블록은 아래 명령으로 생성합니다.
 
@@ -88,6 +90,7 @@ npm run audit:completion -- --site-root /path/to/your-store
 cd marketing-automation-kit
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
+npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
 handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다.

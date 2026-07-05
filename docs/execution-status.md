@@ -31,6 +31,7 @@ npm run apply:env -- --site-root /path/to/applied-store --env-file /path/to/mark
 npm run render:gtm -- --site-root /path/to/applied-store --dry-run
 npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa
 npm run audit:completion -- --site-root /path/to/applied-store
+npm run dashboard:ops -- --site-root /path/to/applied-store
 npm test
 npm run check
 npm run verify:local
@@ -64,10 +65,14 @@ npm run validate:env -- /path/to/applied-store
   - JSON: `dist/completion-audit.json`
   - 요약: `complete=6`, `blocked_external=2`, `missing_evidence=0`, `failed=0`
   - 현재 판정: 운영 env 값과 운영값 기반 GTM import가 `blocked_external`
+- `npm run dashboard:ops -- --site-root /path/to/applied-store`: 운영 대시보드 생성
+  - HTML: `dist/growth-ops-dashboard.html`
+  - JSON: `dist/growth-ops-dashboard.json`
+  - full QA, 완료 감사, handoff, 현재 env 누락값과 다음 외부 계정 액션을 한 화면으로 요약
 - `npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa`: 운영 env 파일 미입력 상태 확인
   - 리포트: `dist/go-live-report.json`
   - 현재 판정: 운영 env 값 누락으로 `ok=false`
-- `npm test`: 64개 테스트 통과
+- `npm test`: 69개 테스트 통과
 - `npm run check`: SDK, 자동화 플로우 엔진, CRM 서버, downstream 시뮬레이터, 사이트 감사, 완료 감사, 마케팅 env 병합기, deployment handoff 생성기, GTM import 생성기, 운영 GTM import 렌더러, env 검증기, 매출 대조기, full QA 오케스트레이터, 브라우저 QA 스크립트, GTM import 검증기, 실제 사이트 런타임 QA 스크립트 문법 검사 통과
 - `npm run verify:local`: 데모 페이지, CRM health, downstream health, CRM 이벤트 플로우, 자동화 액션, downstream 전달 검증 통과
   - downstream 수신 이벤트: `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`
@@ -135,6 +140,7 @@ npm run stop:local
 - 전체 로컬/사이트 QA 오케스트레이터 명령: `npm run full:qa -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - 운영 전환 일괄 실행 명령: `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env`
 - 운영 계정값 handoff 문서 생성 명령: `npm run handoff:deployment -- --site-root /path/to/store`
+- 운영 대시보드 생성 명령: `npm run dashboard:ops -- --site-root /path/to/store`
 - 운영 마케팅 env dry-run/병합 명령: `npm run apply:env -- --site-root /path/to/store --env-file /path/to/marketing-production.env --dry-run`
 - headless Chrome 브라우저 QA 명령: `npm run verify:browser`
 - 실제 자사몰 런타임 QA 명령: `npm run verify:site -- --site-url http://127.0.0.1:3000`

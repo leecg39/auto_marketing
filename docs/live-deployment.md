@@ -87,6 +87,7 @@ CRM 수신 서버는 이벤트별로 `automation_actions`를 함께 계산합니
 ```bash
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run audit:completion -- --site-root /path/to/your-store
+npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
 운영 GTM/GA4/광고/CRM 값까지 반드시 준비됐는지 실패 조건으로 묶으려면 `--require-env-ready`를 추가합니다.
@@ -96,9 +97,10 @@ npm run audit:completion -- --site-root /path/to/your-store
 ```bash
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
+npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
+운영 대시보드는 `dist/growth-ops-dashboard.html`에 생성됩니다. 운영값을 env 파일로 받은 뒤에는 dry-run으로 확인하고 실제 `.env.local`에 병합합니다. `examples/marketing-production.env.example`을 복사한 뒤 모든 placeholder를 실제 운영 값으로 교체합니다.
 
 ```bash
 cp examples/marketing-production.env.example /path/to/marketing-production.env
