@@ -9,9 +9,11 @@ import {
   commandString,
   detectFramework,
   detectPackageManager,
+  extractJsonObject,
   inspectDeploymentTarget,
   parseArgs,
   quoteShell,
+  rankVercelProjects,
   renderMarkdown
 } from '../scripts/inspect-deployment-target.mjs';
 
@@ -45,15 +47,39 @@ test('detects Next.js framework and package manager', () => {
 });
 
 test('builds confirmation-gated Vercel commands', () => {
-  const commands = buildRecommendedCommands('/tmp/store root', 'npm');
+  const commands = buildRecommendedCommands('/tmp/store root', 'npm', {
+    name: 'oliveyoung-shopee',
+    id: 'prj_olive123'
+  });
   const link = commands.find((command) => command.id === 'vercel_link');
   const deploy = commands.find((command) => command.id === 'vercel_prod_deploy');
   const appUrl = commands.find((command) => command.id === 'vercel_env_NEXT_PUBLIC_APP_URL');
 
   assert.equal(link.confirmation_required, true);
+  assert.equal(link.command.includes('prj_olive123'), true);
   assert.equal(deploy.confirmation_required, true);
   assert.equal(appUrl.command.includes('env add NEXT_PUBLIC_APP_URL production'), true);
   assert.equal(commands.find((command) => command.id === 'local_build').confirmation_required, false);
+});
+
+test('extracts Vercel project JSON and ranks matching projects', () => {
+  const parsed = extractJsonObject([
+    'Fetching projects in test-team',
+    '{',
+    '  "projects": [',
+    '    {"name":"shopping-mall","id":"prj_shop","latestProductionUrl":"https://shopping.example"},',
+    '    {"name":"oliveyoung-shopee","id":"prj_olive","latestProductionUrl":"https://olive.example"}',
+    '  ],',
+    '  "contextName": "test-team"',
+    '}'
+  ].join('\n'));
+  const ranked = rankVercelProjects(parsed.projects, '/tmp/oliveyoung', {
+    name: 'oliveyoung-shopee'
+  });
+
+  assert.equal(parsed.contextName, 'test-team');
+  assert.equal(ranked[0].name, 'oliveyoung-shopee');
+  assert.equal(ranked[0].score >= 100, true);
 });
 
 test('reports Vercel login but missing project link as deploy blocker', async () => {
@@ -61,6 +87,7 @@ test('reports Vercel login but missing project link as deploy blocker', async ()
 
   try {
     await writeFile(path.join(tmp, 'package.json'), JSON.stringify({
+      name: 'oliveyoung-shopee',
       scripts: {
         build: 'next build',
         start: 'next start'
@@ -92,6 +119,22 @@ test('reports Vercel login but missing project link as deploy blocker', async ()
             stderr: ''
           };
         }
+        if (command === 'vercel' && args.join(' ') === 'projects ls --format=json') {
+          return {
+            ok: true,
+            stdout: [
+              'Fetching projects in test-team',
+              '{',
+              '  "projects": [',
+              '    { "name": "oliveyoung-shopee", "id": "prj_olive", "latestProductionUrl": "https://oliveyoung-shopee.vercel.app" },',
+              '    { "name": "shopping-mall", "id": "prj_shop", "latestProductionUrl": "https://shopping-mall.vercel.app" }',
+              '  ],',
+              '  "contextName": "test-team"',
+              '}'
+            ].join('\n'),
+            stderr: ''
+          };
+        }
         return {
           ok: false,
           stdout: '',
@@ -104,6 +147,8 @@ test('reports Vercel login but missing project link as deploy blocker', async ()
     assert.equal(report.framework.name, 'next');
     assert.equal(report.hosting.vercel.cli.logged_in, true);
     assert.equal(report.hosting.vercel.project_linked, false);
+    assert.equal(report.hosting.vercel.projects.recommended.id, 'prj_olive');
+    assert.equal(report.commands.find((command) => command.id === 'vercel_link').command.includes('prj_olive'), true);
     assert.equal(report.blockers.some((blocker) => blocker.id === 'hosting_project_not_linked'), true);
     assert.equal(report.blockers.some((blocker) => blocker.id === 'marketing_env_not_ready'), true);
     assert.match(renderMarkdown(report), /배포 대상 사전 점검/);

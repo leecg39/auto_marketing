@@ -68,6 +68,125 @@ function firstUsefulLine(text) {
     .find((line) => line && !line.startsWith('─') && !/^Update available/i.test(line) && !/^Changelog:/i.test(line) && !/^Run `npm/i.test(line)) || '';
 }
 
+function extractJsonObject(text) {
+  const value = String(text || '');
+  const start = value.indexOf('{');
+  if (start < 0) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < value.length; index += 1) {
+    const char = value[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === '{') {
+      depth += 1;
+    }
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(value.slice(start, index + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function tokenize(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1);
+}
+
+function siteSignals(root, packageJson = {}) {
+  const names = [
+    path.basename(root),
+    packageJson.name,
+    packageJson.homepage
+  ].filter(Boolean);
+  const tokens = new Set(names.flatMap(tokenize));
+
+  return {
+    names: names.map((name) => String(name).toLowerCase()),
+    tokens
+  };
+}
+
+function scoreVercelProject(project, signals) {
+  const projectName = String(project.name || '').toLowerCase();
+  const projectUrl = String(project.latestProductionUrl || '').toLowerCase();
+  const projectTokens = new Set([
+    ...tokenize(projectName),
+    ...tokenize(projectUrl)
+  ]);
+  const reasons = [];
+  let score = 0;
+
+  if (signals.names.includes(projectName)) {
+    score += 100;
+    reasons.push('exact_name');
+  }
+
+  for (const token of signals.tokens) {
+    if (projectTokens.has(token)) {
+      score += 12;
+      reasons.push(`token:${token}`);
+    }
+  }
+
+  if (signals.tokens.has('shopee') && (projectTokens.has('shopping') || projectTokens.has('mall') || projectTokens.has('commerce'))) {
+    score += 2;
+    reasons.push('weak_ecommerce_context');
+  }
+
+  return {
+    name: project.name || '',
+    id: project.id || '',
+    latest_production_url: project.latestProductionUrl && project.latestProductionUrl !== '--'
+      ? project.latestProductionUrl
+      : '',
+    updated_at: project.updatedAt || null,
+    score,
+    reasons
+  };
+}
+
+function rankVercelProjects(projects = [], root = process.cwd(), packageJson = {}) {
+  const signals = siteSignals(root, packageJson);
+  return projects
+    .map((project) => scoreVercelProject(project, signals))
+    .sort((left, right) => right.score - left.score || String(left.name).localeCompare(String(right.name)));
+}
+
 function detectPackageManager(files) {
   if (files.has('pnpm-lock.yaml')) {
     return 'pnpm';
@@ -213,12 +332,18 @@ async function runCommand(command, args, options = {}) {
   });
 }
 
-async function inspectVercel(root, files, runner = runCommand) {
+async function inspectVercel(root, files, packageJson = {}, runner = runCommand) {
   const projectJson = await readJsonIfExists(path.join(root, '.vercel', 'project.json'));
   const version = await runner('vercel', ['--version'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS });
   const whoami = version.ok
     ? await runner('vercel', ['whoami'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS })
     : null;
+  const projectsResult = whoami?.ok
+    ? await runner('vercel', ['projects', 'ls', '--format=json'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS })
+    : null;
+  const projectsJson = projectsResult?.ok ? extractJsonObject(projectsResult.stdout || projectsResult.stderr) : null;
+  const projectCandidates = rankVercelProjects(projectsJson?.projects || [], root, packageJson).slice(0, 5);
+  const recommendedProject = projectCandidates.find((candidate) => candidate.score >= 12) || null;
 
   return {
     detected: files.has('vercel.json') || files.has('.vercel/project.json') || version.ok,
@@ -232,6 +357,14 @@ async function inspectVercel(root, files, runner = runCommand) {
       logged_in: Boolean(whoami?.ok),
       account: whoami?.ok ? firstUsefulLine(whoami.stdout || whoami.stderr) : '',
       error: version.ok ? '' : firstUsefulLine(version.stderr || version.stdout)
+    },
+    projects: {
+      available: Boolean(projectsJson),
+      context: projectsJson?.contextName || '',
+      count: Array.isArray(projectsJson?.projects) ? projectsJson.projects.length : 0,
+      candidates: projectCandidates,
+      recommended: recommendedProject,
+      error: projectsResult && !projectsResult.ok ? firstUsefulLine(projectsResult.stderr || projectsResult.stdout) : ''
     }
   };
 }
@@ -243,7 +376,7 @@ async function inspectDeploymentTarget(options, runtime = {}) {
   const packageManager = detectPackageManager(files);
   const framework = detectFramework(packageJson, files);
   const env = await validateDeploymentEnv(siteRoot);
-  const vercel = await inspectVercel(siteRoot, files, runtime.runCommand || runCommand);
+  const vercel = await inspectVercel(siteRoot, files, packageJson || {}, runtime.runCommand || runCommand);
   const netlify = {
     detected: files.has('netlify.toml') || files.has('.netlify/state.json'),
     config_file: files.has('netlify.toml') ? 'netlify.toml' : '',
@@ -259,7 +392,7 @@ async function inspectDeploymentTarget(options, runtime = {}) {
     render: files.has('render.yaml')
   };
 
-  const commands = buildRecommendedCommands(siteRoot, packageManager);
+  const commands = buildRecommendedCommands(siteRoot, packageManager, vercel.projects.recommended);
   const blockers = buildBlockers({
     framework,
     env,
@@ -380,8 +513,9 @@ function buildBlockers({ framework, env, vercel, netlify, cloudflare, generic })
   return blockers;
 }
 
-function buildRecommendedCommands(siteRoot, packageManager) {
+function buildRecommendedCommands(siteRoot, packageManager, recommendedProject = null) {
   const cwd = ['vercel', '--cwd', siteRoot];
+  const projectTarget = recommendedProject?.id || '<project-name-or-id>';
   const envCommands = PRODUCTION_ENV_KEYS.map((key) => ({
     id: `vercel_env_${key}`,
     label: `${key} 값을 Vercel production env에 추가`,
@@ -400,10 +534,12 @@ function buildRecommendedCommands(siteRoot, packageManager) {
     },
     {
       id: 'vercel_link',
-      label: 'Vercel 프로젝트 링크',
-      command: commandString([...cwd, 'link', '--yes', '--project', '<project-name-or-id>']),
+      label: recommendedProject ? `Vercel 프로젝트 링크 (${recommendedProject.name})` : 'Vercel 프로젝트 링크',
+      command: commandString([...cwd, 'link', '--yes', '--project', projectTarget]),
       confirmation_required: true,
-      reason: '로컬 디렉터리를 Vercel 프로젝트와 연결합니다.'
+      reason: recommendedProject
+        ? `로컬 디렉터리를 후보 프로젝트 ${recommendedProject.name}에 연결합니다.`
+        : '로컬 디렉터리를 Vercel 프로젝트와 연결합니다.'
     },
     ...envCommands,
     {
@@ -431,6 +567,12 @@ function nextStep(blockers, vercel, env) {
     return '`vercel login`으로 계정을 확인한 뒤 다시 실행하세요.';
   }
   if (!vercel.project_linked) {
+    if (vercel.projects.recommended) {
+      return `사용자 확인 후 \`vercel --cwd <site-root> link --yes --project ${vercel.projects.recommended.id}\`로 후보 프로젝트 \`${vercel.projects.recommended.name}\`에 연결하세요.`;
+    }
+    if (vercel.projects.candidates.length) {
+      return '기존 Vercel 프로젝트 후보를 확인한 뒤 사용자 확인 후 `vercel --cwd <site-root> link --yes --project <project-name-or-id>`로 프로젝트를 연결하세요.';
+    }
     return '사용자 확인 후 `vercel --cwd <site-root> link --yes --project <project-name-or-id>`로 프로젝트를 연결하세요.';
   }
   if (!env.ready) {
@@ -440,6 +582,26 @@ function nextStep(blockers, vercel, env) {
     return '배포 대상이 준비되었습니다. 사용자 확인 후 production deploy를 실행하고 배포 URL에서 verify:site를 다시 실행하세요.';
   }
   return '표시된 blocker를 해결한 뒤 다시 실행하세요.';
+}
+
+function renderVercelProjectCandidates(projects) {
+  if (!projects?.available) {
+    return '- 프로젝트 목록 조회 안 됨';
+  }
+  if (!projects.candidates.length) {
+    return '- 기존 프로젝트 없음';
+  }
+
+  return projects.candidates
+    .map((project) => {
+      const suffix = [
+        `score=${project.score}`,
+        project.latest_production_url ? `url=${project.latest_production_url}` : '',
+        project.reasons.length ? `reasons=${project.reasons.join(',')}` : ''
+      ].filter(Boolean).join(' / ');
+      return `- \`${project.name}\` (${project.id})${suffix ? `: ${suffix}` : ''}`;
+    })
+    .join('\n');
 }
 
 function renderCommandList(commands) {
@@ -497,8 +659,14 @@ function renderMarkdown(report) {
     `- Vercel CLI: \`${report.hosting.vercel.cli.available}\` (${report.hosting.vercel.cli.version || report.hosting.vercel.cli.error || 'unknown'})`,
     `- Vercel 로그인: \`${report.hosting.vercel.cli.logged_in}\`${report.hosting.vercel.cli.account ? ` (${report.hosting.vercel.cli.account})` : ''}`,
     `- Vercel 프로젝트 링크: \`${report.hosting.vercel.project_linked}\``,
+    `- Vercel 프로젝트 목록: \`${report.hosting.vercel.projects.available}\`${report.hosting.vercel.projects.context ? ` (${report.hosting.vercel.projects.context}, ${report.hosting.vercel.projects.count}개)` : ''}`,
+    `- 추천 Vercel 프로젝트: \`${report.hosting.vercel.projects.recommended?.name || '없음'}\``,
     `- Netlify 설정: \`${report.hosting.netlify.detected}\``,
     `- Cloudflare 설정: \`${report.hosting.cloudflare.detected}\``,
+    '',
+    '### Vercel 프로젝트 후보',
+    '',
+    renderVercelProjectCandidates(report.hosting.vercel.projects),
     '',
     '## 운영 URL 탐색',
     '',
@@ -611,8 +779,10 @@ export {
   commandString,
   detectFramework,
   detectPackageManager,
+  extractJsonObject,
   inspectDeploymentTarget,
   parseArgs,
   quoteShell,
+  rankVercelProjects,
   renderMarkdown
 };

@@ -16,7 +16,7 @@
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
 - `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `scripts/reconcile-revenue.mjs`: 주문 DB와 GA4 매출 CSV 일 단위 대조기
-- `scripts/inspect-deployment-target.mjs`: 배포 플랫폼 링크, Vercel CLI 로그인, 운영 URL/env 차단점 점검기
+- `scripts/inspect-deployment-target.mjs`: 배포 플랫폼 링크, Vercel CLI 로그인, 기존 Vercel 프로젝트 후보, 운영 URL/env 차단점 점검기
 - `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 - `scripts/refresh-ops-status.mjs`: full QA, handoff, 완료 감사, 운영 대시보드를 한 번에 갱신하는 오케스트레이터
 
