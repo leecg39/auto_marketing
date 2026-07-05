@@ -85,12 +85,18 @@ CRM 수신 서버는 이벤트별로 `automation_actions`를 함께 계산합니
 전체 로컬/사이트 검증은 아래 명령으로 먼저 실행합니다.
 
 ```bash
+npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
+```
+
+수동으로 나누어 실행해야 할 때는 아래 명령을 사용합니다.
+
+```bash
 npm run full:qa -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-운영 GTM/GA4/광고/CRM 값까지 반드시 준비됐는지 실패 조건으로 묶으려면 `--require-env-ready`를 추가합니다.
+운영 GTM/GA4/광고/CRM 값까지 반드시 준비됐는지 실패 조건으로 묶으려면 `ops:refresh` 또는 `full:qa`에 `--require-env-ready`를 추가합니다.
 
 운영 계정값을 채우기 위한 handoff 문서는 아래 명령으로 생성합니다.
 
