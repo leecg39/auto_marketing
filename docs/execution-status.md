@@ -29,7 +29,9 @@
   - 기준 deployment: `dpl_DFpDtjckBqoVhTLpPWfsKjc6za1j`
   - env 3개 반영 deployment: `dpl_3enpokm8WGy4UYhX9ucJhgyrAXyH`
   - Google Ads conversion ID 반영 deployment: `dpl_8MkfXoGgeCk1taUoqrZpehXFozAu`
-  - 신규 URL: `https://auto-marketing-eo3oy38ai-petasos.vercel.app`
+  - env readiness `next_actions` 반영 deployment: `dpl_CHcRbN9tR3kPs9zFipguGf9i98Na`
+  - 최신 deployment URL: `https://auto-marketing-estq4q908-petasos.vercel.app`
+  - production alias: `https://auto-marketing-sigma.vercel.app`
   - 상태: `READY`
 - Vercel production env readiness 현재 남은 외부값:
   - `NEXT_PUBLIC_GTM_ID`
@@ -41,6 +43,7 @@
   - 원본 env 값은 계속 노출하지 않음
   - `next_actions`로 GTM, GA4, Google Ads, Meta Pixel, CRM webhook별 다음 외부 계정 액션을 반환
   - `/dashboard`에서 남은 외부 계정 액션을 서비스별로 표시
+  - production alias `https://auto-marketing-sigma.vercel.app`에서 반영 확인
 - 로컬 검증 스크립트에서 아래 CRM 플로우 확인
   - `add_to_cart -> cart_abandonment_candidate`
   - `begin_checkout -> checkout_abandonment_candidate`
@@ -106,10 +109,12 @@ npm run validate:env -- /path/to/applied-store
   - `/api/crm/events` GET: `{"ok":true,"service":"marketing-automation-crm-events"}`
   - `/api/crm/events` POST purchase: `202`, flow `post_purchase_review_and_recommendation`, actions `first_purchase_thank_you`, `review_request`, `repurchase_due`, `purchase_exclusion`
   - `/api/marketing/env-status` GET: `200`, production env readiness 요약 반환, 원본 env 값 미노출
+  - `/dashboard` headless Chrome DOM: GTM, GA4, Google Ads, Meta Pixel, CRM webhook 다음 액션 5개 렌더링 확인
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app`: Vercel production 자동 검증 통과
   - 리포트: `dist/vercel-production-report.json`
   - 요약: `passed=7`, `failed=0`
   - 체크: root page, dashboard page, API health, env readiness, purchase flow, consent gate, demo browser autorun
+  - env readiness next actions: `gtm_container`, `ga4_stream`, `google_ads_purchase`, `meta_pixel`, `crm_downstream`
   - browser autorun: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, 구매 중복 방지, dataLayer PII 미포함 확인
 - `npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready`: 운영 env 값 미준비 상태에서는 실패하도록 설계됨
 - `npm run plan:vercel-env -- --site-root /path/to/applied-store --base-url https://auto-marketing-sigma.vercel.app`: Vercel production env 입력 계획 생성
