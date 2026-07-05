@@ -10,6 +10,7 @@ const DEFAULT_TIMEOUT_MS = 240000;
 const DEFAULT_REPORT = path.join(KIT_ROOT, 'dist', 'ops-refresh-report.json');
 const DEFAULT_FULL_QA_REPORT = path.join(KIT_ROOT, 'dist', 'full-qa-report.json');
 const DEFAULT_DASHBOARD = path.join(KIT_ROOT, 'dist', 'growth-ops-dashboard.html');
+const DEFAULT_EXTERNAL_SETUP = path.join(KIT_ROOT, 'dist', 'external-account-setup.md');
 
 function nowIso() {
   return new Date().toISOString();
@@ -218,6 +219,16 @@ function buildSteps(options) {
       ]
     },
     {
+      id: 'external_setup',
+      label: 'External account setup refresh',
+      command: process.execPath,
+      args: [
+        path.join(KIT_ROOT, 'scripts', 'generate-external-setup-plan.mjs'),
+        '--site-root',
+        options.siteRoot
+      ]
+    },
+    {
       id: 'completion_audit',
       label: 'Completion audit refresh',
       command: process.execPath,
@@ -343,6 +354,7 @@ async function runOpsRefresh(rawOptions, runner = runCommand) {
     ok: summary.failed === 0,
     summary,
     dashboard: DEFAULT_DASHBOARD,
+    external_setup: DEFAULT_EXTERNAL_SETUP,
     steps
   };
 
@@ -366,7 +378,7 @@ function printHelp() {
     '  --site-port <number>     Storefront dev server port, default 3100',
     '  --timeout-ms <number>    Per-command timeout passed to full QA, default 240000',
     '  --require-env-ready      Treat missing operating env as full QA failure',
-    '  --skip-full-qa           Regenerate handoff/audit/dashboard from existing QA evidence',
+    '  --skip-full-qa           Regenerate handoff/external setup/audit/dashboard from existing QA evidence',
     '  --open-dashboard         Open dist/growth-ops-dashboard.html after refresh',
     '  --report <path>          JSON refresh report output'
   ].join('\n'));
@@ -384,6 +396,7 @@ async function main() {
     ok: report.ok,
     report_file: report.report_file,
     dashboard: report.dashboard,
+    external_setup: report.external_setup,
     summary: report.summary
   }, null, 2));
   if (!report.ok) {

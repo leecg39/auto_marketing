@@ -90,18 +90,19 @@ npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다. 전체 갱신 리포트는 `dist/ops-refresh-report.json`에 저장됩니다.
+전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`와 `dist/external-account-setup.json`에 저장됩니다. 전체 갱신 리포트는 `dist/ops-refresh-report.json`에 저장됩니다.
 
 운영 계정값을 입력할 사람에게 넘길 체크리스트와 env 블록은 아래 명령으로 생성합니다.
 
 ```bash
 cd marketing-automation-kit
 npm run handoff:deployment -- --site-root /path/to/your-store
+npm run handoff:external -- --site-root /path/to/your-store
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
-handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다.
+handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트와 수집할 값은 `dist/external-account-setup.md`에서 확인합니다.
 
 운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 출력에는 값이 마스킹됩니다.
 

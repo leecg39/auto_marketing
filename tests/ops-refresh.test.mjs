@@ -48,6 +48,7 @@ test('builds refresh steps with optional full QA skip', () => {
   assert.equal(steps[0].skip, true);
   assert.deepEqual(steps.slice(1).map((step) => step.id), [
     'handoff',
+    'external_setup',
     'completion_audit',
     'ops_dashboard'
   ]);
@@ -113,12 +114,13 @@ test('ops refresh continues after a failed command and writes report', async () 
     assert.deepEqual(calls, [
       'full_qa',
       'handoff',
+      'external_setup',
       'completion_audit',
       'ops_dashboard'
     ]);
     assert.equal(report.ok, false);
     assert.equal(report.summary.failed, 1);
-    assert.equal(saved.steps.length, 4);
+    assert.equal(saved.steps.length, 5);
     assert.equal(saved.steps[0].status, 'failed');
   } finally {
     await rm(tmp, { recursive: true, force: true });
@@ -155,6 +157,7 @@ test('ops refresh can skip full QA and still refresh dashboard stack', async () 
 
     assert.deepEqual(calls, [
       'handoff',
+      'external_setup',
       'completion_audit',
       'ops_dashboard'
     ]);
