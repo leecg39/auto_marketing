@@ -33,6 +33,7 @@ npm run full:qa -- --site-root /path/to/applied-store --skip-live --site-port 31
 npm run handoff:deployment -- --site-root /path/to/applied-store
 npm run handoff:external -- --site-root /path/to/applied-store
 npm run inspect:deployment -- --site-root /path/to/applied-store
+npm run inspect:deployment -- --site-root /path/to/applied-store --vercel-project-url https://vercel.com/team/project
 npm run apply:env -- --site-root /path/to/applied-store --env-file /path/to/marketing-production.env --dry-run
 npm run render:gtm -- --site-root /path/to/applied-store --dry-run
 npm run go:live -- --site-root /path/to/applied-store --dry-run --skip-full-qa
@@ -65,6 +66,10 @@ npm run validate:env -- /path/to/applied-store
   - 대시보드: `dist/growth-ops-dashboard.html`
   - 요약: `passed=5`, `warning=0`, `skipped=1`, `failed=0`
   - 실행 step: `deployment_target`, `handoff`, `external_setup`, `completion_audit`, `ops_dashboard`
+- `npm run ops:refresh -- --site-root /path/to/applied-store --skip-full-qa --vercel-project-url https://vercel.com/petasos/auto-marketing`: 지정 Vercel 프로젝트 접근권한 포함 산출물 재생성 통과
+  - 리포트: `dist/ops-refresh-report.json`
+  - 요약: `passed=5`, `warning=0`, `skipped=1`, `failed=0`
+  - 배포 대상 blocker: `target_vercel_project_inaccessible`, `hosting_project_not_linked`, `marketing_env_not_ready`
 - `npm run full:qa -- --site-root /path/to/applied-store --start-local --start-site --site-port 3100 --site-event-probe --timeout-ms 240000`: 통과
   - 리포트: `dist/full-qa-report.json`
   - `local_qa_ok`: `true`
@@ -90,17 +95,20 @@ npm run validate:env -- /path/to/applied-store
   - 외부 실행 항목: 운영 도메인, GTM 컨테이너, GA4 웹 스트림, Google Ads 구매 전환, Meta 픽셀, CRM webhook
   - 운영 URL 탐색 결과: 후보 사이트 env에서 `http://localhost:3000`만 발견, 운영 HTTPS URL 추천값 없음
   - 모든 계정 리소스 생성/게시/실제 발송은 Computer Use 실행 직전 사용자 확인 게이트 포함
-- `npm run inspect:deployment -- --site-root /path/to/applied-store`: 배포 대상 점검 통과
+- `npm run inspect:deployment -- --site-root /path/to/applied-store --vercel-project-url https://vercel.com/petasos/auto-marketing`: 배포 대상 점검 통과
   - 문서: `dist/deployment-target-plan.md`
   - JSON: `dist/deployment-target-plan.json`
   - 추천 플랫폼: `vercel`
   - Vercel CLI: 설치됨, 로그인 계정 `leecg39-8923`
   - Vercel 프로젝트 목록: `annatars-projects` scope에서 9개 조회
+  - 지정 Vercel 프로젝트: `petasos/auto-marketing`
+  - 지정 프로젝트 접근 상태: 현재 CLI 계정에서 `petasos` scope 조회 실패, `Error: The specified scope does not exist`
   - 기존 프로젝트 후보: `shopping-mall` (`prj_jbiz4pdFrJWDmVgFK030WPSzNRYk`, weak ecommerce context, latest production URL `404`)
   - 추천 Vercel 프로젝트: 없음, 이름이 충분히 일치하는 프로젝트가 없어 link 명령은 `<project-name-or-id>` placeholder 유지
   - Vercel project link: `false`
   - production deploy ready: `false`
-  - blocker: `hosting_project_not_linked`, `marketing_env_not_ready`
+  - blocker: `target_vercel_project_inaccessible`, `hosting_project_not_linked`, `marketing_env_not_ready`
+  - 다음 단계: Vercel CLI 계정에 `petasos` scope 접근 권한을 부여하거나 권한 있는 계정으로 다시 로그인
   - 확인 필요 명령: `vercel link`, Vercel production env add, `vercel deploy --prod`
 - `npm run render:gtm -- --site-root /path/to/applied-store --dry-run`: 운영 env 값 미준비로 예상대로 미생성
   - 출력: `ok=false`
@@ -199,6 +207,7 @@ npm run stop:local
 - 전체 로컬/사이트 QA 오케스트레이터 명령: `npm run full:qa -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - production runtime QA 명령: `npm run verify:prod-site -- --site-root /path/to/store --build --event-probe`
 - 배포 대상 점검 명령: `npm run inspect:deployment -- --site-root /path/to/store`
+- 지정 Vercel 프로젝트 접근권한 점검 명령: `npm run inspect:deployment -- --site-root /path/to/store --vercel-project-url https://vercel.com/team/project`
 - 운영 전환 일괄 실행 명령: `npm run go:live -- --site-root /path/to/store --env-file /path/to/marketing-production.env`
 - 운영 상태 일괄 갱신 명령: `npm run ops:refresh -- --site-root /path/to/store --start-local --start-site --site-port 3100`
 - 운영 계정값 handoff 문서 생성 명령: `npm run handoff:deployment -- --site-root /path/to/store`

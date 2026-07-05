@@ -61,6 +61,105 @@ function commandString(parts) {
   return parts.map(quoteShell).join(' ');
 }
 
+function parseVercelProjectUrl(rawUrl) {
+  const input = String(rawUrl || '').trim();
+  if (!input) {
+    return {
+      ok: false,
+      url: '',
+      scope: '',
+      project: '',
+      error: 'missing_vercel_project_url'
+    };
+  }
+
+  try {
+    const url = new URL(input);
+    const parts = url.pathname.split('/').filter(Boolean);
+
+    if (!/(^|\.)vercel\.com$/i.test(url.hostname) || parts.length < 2) {
+      return {
+        ok: false,
+        url: input,
+        scope: '',
+        project: '',
+        error: 'expected_vercel_project_url'
+      };
+    }
+
+    return {
+      ok: true,
+      url: `https://vercel.com/${parts[0]}/${parts[1]}`,
+      scope: parts[0],
+      project: parts[1],
+      error: ''
+    };
+  } catch {
+    return {
+      ok: false,
+      url: input,
+      scope: '',
+      project: '',
+      error: 'invalid_vercel_project_url'
+    };
+  }
+}
+
+function resolveVercelTargetProject(options = {}) {
+  const fromUrl = options.vercelProjectUrl
+    ? parseVercelProjectUrl(options.vercelProjectUrl)
+    : null;
+  const scope = options.vercelScope || fromUrl?.scope || '';
+  const project = options.vercelProject || fromUrl?.project || '';
+  const provided = Boolean(options.vercelProjectUrl || options.vercelScope || options.vercelProject);
+
+  if (!provided) {
+    return {
+      provided: false,
+      source: '',
+      url: '',
+      scope: '',
+      project: '',
+      valid: true,
+      error: ''
+    };
+  }
+
+  if (fromUrl && !fromUrl.ok) {
+    return {
+      provided: true,
+      source: 'url',
+      url: fromUrl.url,
+      scope: '',
+      project: '',
+      valid: false,
+      error: fromUrl.error
+    };
+  }
+
+  if (!scope || !project) {
+    return {
+      provided: true,
+      source: fromUrl ? 'url' : 'flags',
+      url: fromUrl?.url || '',
+      scope,
+      project,
+      valid: false,
+      error: 'vercel_scope_and_project_required'
+    };
+  }
+
+  return {
+    provided: true,
+    source: fromUrl ? 'url' : 'flags',
+    url: fromUrl?.url || `https://vercel.com/${scope}/${project}`,
+    scope,
+    project,
+    valid: true,
+    error: ''
+  };
+}
+
 function firstUsefulLine(text) {
   return String(text || '')
     .split(/\r?\n/)
@@ -402,8 +501,114 @@ async function annotateProjectUrlProbes(projects, urlProbe = probeUrl) {
   })));
 }
 
-async function inspectVercel(root, files, packageJson = {}, runner = runCommand, urlProbe = probeUrl) {
+function dedupeProjects(projects) {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const project of projects) {
+    const key = project.id || project.name;
+    if (key && seen.has(key)) {
+      continue;
+    }
+    if (key) {
+      seen.add(key);
+    }
+    deduped.push(project);
+  }
+
+  return deduped;
+}
+
+async function inspectTargetVercelProject(root, targetProject, packageJson, runner, urlProbe) {
+  const base = {
+    ...targetProject,
+    scope_accessible: false,
+    found: false,
+    accessible: false,
+    context: '',
+    project_id: '',
+    latest_production_url: '',
+    url_probe: {
+      checked: false,
+      ok: false,
+      status: null,
+      title: '',
+      error: ''
+    },
+    error: targetProject.error || '',
+    next_step: ''
+  };
+
+  if (!targetProject.provided) {
+    return base;
+  }
+  if (!targetProject.valid) {
+    return {
+      ...base,
+      next_step: 'Vercel 프로젝트 URL 또는 scope/project 값을 다시 확인하세요.'
+    };
+  }
+
+  const projectsResult = await runner('vercel', [
+    'projects',
+    'ls',
+    '--scope',
+    targetProject.scope,
+    '--format=json'
+  ], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS });
+  const projectsJson = projectsResult.ok ? extractJsonObject(projectsResult.stdout || projectsResult.stderr) : null;
+  const exactProject = projectsJson?.projects?.find((project) => (
+    project.name === targetProject.project || project.id === targetProject.project
+  ));
+  const scopedError = projectsResult.ok
+    ? ''
+    : firstUsefulLine(projectsResult.stderr || projectsResult.stdout);
+
+  if (!projectsResult.ok || !projectsJson) {
+    return {
+      ...base,
+      scope_accessible: false,
+      error: scopedError || 'vercel_scope_not_accessible',
+      next_step: `Vercel CLI 계정에 \`${targetProject.scope}\` scope 접근 권한을 부여하거나 권한 있는 계정으로 다시 로그인하세요.`
+    };
+  }
+
+  if (!exactProject) {
+    return {
+      ...base,
+      scope_accessible: true,
+      context: projectsJson.contextName || targetProject.scope,
+      error: `project_not_found:${targetProject.project}`,
+      next_step: `\`${targetProject.scope}\` scope에서 \`${targetProject.project}\` 프로젝트가 보이지 않습니다. 프로젝트명 또는 권한을 확인하세요.`
+    };
+  }
+
+  const [candidate] = await annotateProjectUrlProbes([
+    {
+      ...scoreVercelProject(exactProject, siteSignals(root, packageJson)),
+      score: 1000,
+      reasons: ['explicit_target'],
+      target: true
+    }
+  ], urlProbe);
+
+  return {
+    ...base,
+    scope_accessible: true,
+    found: true,
+    accessible: true,
+    context: projectsJson.contextName || targetProject.scope,
+    project_id: candidate.id,
+    latest_production_url: candidate.latest_production_url,
+    url_probe: candidate.url_probe,
+    candidate,
+    error: ''
+  };
+}
+
+async function inspectVercel(root, files, packageJson = {}, runner = runCommand, urlProbe = probeUrl, options = {}) {
   const projectJson = await readJsonIfExists(path.join(root, '.vercel', 'project.json'));
+  const targetProject = resolveVercelTargetProject(options);
   const version = await runner('vercel', ['--version'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS });
   const whoami = version.ok
     ? await runner('vercel', ['whoami'], { cwd: root, timeoutMs: DEFAULT_TIMEOUT_MS })
@@ -416,7 +621,33 @@ async function inspectVercel(root, files, packageJson = {}, runner = runCommand,
     rankVercelProjects(projectsJson?.projects || [], root, packageJson).slice(0, 5),
     urlProbe
   );
-  const recommendedProject = projectCandidates.find((candidate) => candidate.score >= 12) || null;
+  const targetStatus = whoami?.ok
+    ? await inspectTargetVercelProject(root, targetProject, packageJson, runner, urlProbe)
+    : {
+        ...targetProject,
+        scope_accessible: false,
+        found: false,
+        accessible: false,
+        context: '',
+        project_id: '',
+        latest_production_url: '',
+        url_probe: {
+          checked: false,
+          ok: false,
+          status: null,
+          title: '',
+          error: ''
+        },
+        error: targetProject.provided ? 'vercel_cli_not_logged_in' : '',
+        next_step: targetProject.provided ? '`vercel login`으로 계정을 확인한 뒤 다시 실행하세요.' : ''
+      };
+  const allCandidates = dedupeProjects([
+    ...(targetStatus.candidate ? [targetStatus.candidate] : []),
+    ...projectCandidates
+  ]);
+  const recommendedProject = targetStatus.candidate
+    || allCandidates.find((candidate) => candidate.score >= 12)
+    || null;
 
   return {
     detected: files.has('vercel.json') || files.has('.vercel/project.json') || version.ok,
@@ -431,11 +662,12 @@ async function inspectVercel(root, files, packageJson = {}, runner = runCommand,
       account: whoami?.ok ? firstUsefulLine(whoami.stdout || whoami.stderr) : '',
       error: version.ok ? '' : firstUsefulLine(version.stderr || version.stdout)
     },
+    target_project: targetStatus,
     projects: {
       available: Boolean(projectsJson),
       context: projectsJson?.contextName || '',
       count: Array.isArray(projectsJson?.projects) ? projectsJson.projects.length : 0,
-      candidates: projectCandidates,
+      candidates: allCandidates,
       recommended: recommendedProject,
       error: projectsResult && !projectsResult.ok ? firstUsefulLine(projectsResult.stderr || projectsResult.stdout) : ''
     }
@@ -454,7 +686,8 @@ async function inspectDeploymentTarget(options, runtime = {}) {
     files,
     packageJson || {},
     runtime.runCommand || runCommand,
-    runtime.probeUrl || probeUrl
+    runtime.probeUrl || probeUrl,
+    options
   );
   const netlify = {
     detected: files.has('netlify.toml') || files.has('.netlify/state.json'),
@@ -550,6 +783,13 @@ function buildBlockers({ framework, env, vercel, netlify, cloudflare, generic })
   const blockers = [];
   const hasHostingLink = vercel.project_linked || netlify.project_linked || cloudflare.detected || generic.dockerfile || generic.fly || generic.render;
 
+  if (vercel.target_project?.provided && !vercel.target_project.accessible) {
+    blockers.push({
+      id: 'target_vercel_project_inaccessible',
+      severity: 'blocking',
+      detail: targetVercelProjectBlockerDetail(vercel.target_project)
+    });
+  }
   if (!framework.detected) {
     blockers.push({
       id: 'framework_not_detected',
@@ -590,6 +830,23 @@ function buildBlockers({ framework, env, vercel, netlify, cloudflare, generic })
   }
 
   return blockers;
+}
+
+function targetVercelProjectBlockerDetail(targetProject) {
+  const label = targetProject.scope && targetProject.project
+    ? `${targetProject.scope}/${targetProject.project}`
+    : targetProject.url || 'unknown';
+
+  if (!targetProject.valid) {
+    return `지정한 Vercel 프로젝트 ${label} 값을 파싱할 수 없습니다: ${targetProject.error}`;
+  }
+  if (!targetProject.scope_accessible) {
+    return `현재 Vercel CLI 계정에서 지정한 프로젝트 ${label}의 scope를 조회할 수 없습니다: ${targetProject.error || 'scope_not_accessible'}`;
+  }
+  if (!targetProject.found) {
+    return `지정한 Vercel 프로젝트 ${label}가 조회 가능한 scope 안에서 발견되지 않았습니다: ${targetProject.error || 'project_not_found'}`;
+  }
+  return `지정한 Vercel 프로젝트 ${label}에 접근할 수 없습니다.`;
 }
 
 function buildRecommendedCommands(siteRoot, packageManager, recommendedProject = null) {
@@ -645,6 +902,9 @@ function nextStep(blockers, vercel, env) {
   if (!vercel.cli.logged_in) {
     return '`vercel login`으로 계정을 확인한 뒤 다시 실행하세요.';
   }
+  if (vercel.target_project?.provided && !vercel.target_project.accessible) {
+    return vercel.target_project.next_step || '지정한 Vercel 프로젝트 접근 권한을 확인한 뒤 다시 실행하세요.';
+  }
   if (!vercel.project_linked) {
     if (vercel.projects.recommended) {
       return `사용자 확인 후 \`vercel --cwd <site-root> link --yes --project ${vercel.projects.recommended.id}\`로 후보 프로젝트 \`${vercel.projects.recommended.name}\`에 연결하세요.`;
@@ -683,6 +943,28 @@ function renderVercelProjectCandidates(projects) {
       return `- \`${project.name}\` (${project.id})${suffix ? `: ${suffix}` : ''}`;
     })
     .join('\n');
+}
+
+function renderVercelTargetProject(targetProject) {
+  if (!targetProject?.provided) {
+    return '- 지정 안 됨';
+  }
+
+  const label = targetProject.scope && targetProject.project
+    ? `${targetProject.scope}/${targetProject.project}`
+    : targetProject.url || 'unknown';
+  const status = [
+    `valid=${targetProject.valid}`,
+    `scope_accessible=${targetProject.scope_accessible}`,
+    `found=${targetProject.found}`,
+    `accessible=${targetProject.accessible}`,
+    targetProject.project_id ? `project_id=${targetProject.project_id}` : '',
+    targetProject.latest_production_url ? `url=${targetProject.latest_production_url}` : '',
+    targetProject.url_probe?.checked ? `http=${targetProject.url_probe.status || targetProject.url_probe.error}` : '',
+    targetProject.error ? `error=${targetProject.error}` : ''
+  ].filter(Boolean).join(' / ');
+
+  return `- \`${label}\`${status ? `: ${status}` : ''}`;
 }
 
 function renderCommandList(commands) {
@@ -744,6 +1026,10 @@ function renderMarkdown(report) {
     `- 추천 Vercel 프로젝트: \`${report.hosting.vercel.projects.recommended?.name || '없음'}\``,
     `- Netlify 설정: \`${report.hosting.netlify.detected}\``,
     `- Cloudflare 설정: \`${report.hosting.cloudflare.detected}\``,
+    '',
+    '### 지정 Vercel 프로젝트',
+    '',
+    renderVercelTargetProject(report.hosting.vercel.target_project),
     '',
     '### Vercel 프로젝트 후보',
     '',
@@ -810,6 +1096,15 @@ function parseArgs(args) {
     if (key === 'json-output') {
       parsed.jsonOutput = path.resolve(value);
     }
+    if (key === 'vercel-project-url') {
+      parsed.vercelProjectUrl = value;
+    }
+    if (key === 'vercel-scope') {
+      parsed.vercelScope = value;
+    }
+    if (key === 'vercel-project') {
+      parsed.vercelProject = value;
+    }
   }
 
   if (parsed.siteRoot) {
@@ -827,7 +1122,10 @@ function usage() {
     'Options:',
     '  --site-root /path     Storefront root.',
     '  --output FILE         Markdown output. Default: dist/deployment-target-plan.md',
-    '  --json-output FILE    JSON output. Default: dist/deployment-target-plan.json'
+    '  --json-output FILE    JSON output. Default: dist/deployment-target-plan.json',
+    '  --vercel-project-url URL  Expected Vercel project URL, for example https://vercel.com/team/project',
+    '  --vercel-scope NAME       Expected Vercel scope/team slug',
+    '  --vercel-project NAME     Expected Vercel project name or id'
   ].join('\n');
 }
 
@@ -845,6 +1143,14 @@ async function main() {
     ready_for_production_deploy: report.ready_for_production_deploy,
     recommended_platform: report.recommended_platform,
     blockers: report.blockers.map((blocker) => blocker.id),
+    target_project: report.hosting.vercel.target_project?.provided
+      ? {
+          scope: report.hosting.vercel.target_project.scope,
+          project: report.hosting.vercel.target_project.project,
+          accessible: report.hosting.vercel.target_project.accessible,
+          error: report.hosting.vercel.target_project.error
+        }
+      : null,
     output: options.output,
     json_output: options.jsonOutput,
     next_step: report.next_step
@@ -863,6 +1169,7 @@ export {
   extractJsonObject,
   inspectDeploymentTarget,
   parseArgs,
+  parseVercelProjectUrl,
   probeUrl,
   quoteShell,
   rankVercelProjects,

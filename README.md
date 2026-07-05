@@ -73,6 +73,7 @@ npm run verify:site -- --site-url http://127.0.0.1:3000
 npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run inspect:deployment -- --site-root /path/to/your-store
+npm run inspect:deployment -- --site-root /path/to/your-store --vercel-project-url https://vercel.com/team/project
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
 ```
 
@@ -85,6 +86,7 @@ cd marketing-automation-kit
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe
 npm run ops:refresh -- --site-root /path/to/your-store --start-local --start-site --site-port 3100 --site-event-probe --site-production-probe
+npm run ops:refresh -- --site-root /path/to/your-store --skip-full-qa --vercel-project-url https://vercel.com/team/project
 ```
 
 수동으로 나누어 실행하려면 아래 명령을 사용합니다.
@@ -108,11 +110,14 @@ cd marketing-automation-kit
 npm run handoff:deployment -- --site-root /path/to/your-store
 npm run handoff:external -- --site-root /path/to/your-store
 npm run inspect:deployment -- --site-root /path/to/your-store
+npm run inspect:deployment -- --site-root /path/to/your-store --vercel-project-url https://vercel.com/team/project
 npm run audit:completion -- --site-root /path/to/your-store
 npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
 handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/deployment-handoff.json`에 저장됩니다. 외부 계정 생성/게시 전 확인 게이트, 수집할 값, 운영 URL 탐색 결과는 `dist/external-account-setup.md`에서 확인합니다. 배포 프로젝트 링크, Vercel production env 입력, production deploy처럼 외부 상태를 바꾸는 명령은 `dist/deployment-target-plan.md`에 `확인 필요: true`로 표시됩니다.
+
+이미 Vercel 프로젝트 URL이 있다면 `--vercel-project-url`을 함께 넘깁니다. 점검기는 URL에서 scope/project를 파싱하고, 현재 Vercel CLI 계정으로 해당 scope와 프로젝트를 조회할 수 있는지 별도 blocker로 기록합니다.
 
 운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 출력에는 값이 마스킹됩니다.
 

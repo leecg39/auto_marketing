@@ -161,6 +161,15 @@ function parseArgs(args) {
     if (key === 'full-qa-report') {
       parsed.fullQaReport = path.resolve(value);
     }
+    if (key === 'vercel-project-url') {
+      parsed.vercelProjectUrl = value;
+    }
+    if (key === 'vercel-scope') {
+      parsed.vercelScope = value;
+    }
+    if (key === 'vercel-project') {
+      parsed.vercelProject = value;
+    }
   }
 
   if (!Number.isFinite(parsed.sitePort) || parsed.sitePort <= 0) {
@@ -178,6 +187,21 @@ function parseArgs(args) {
 
 function buildSteps(options) {
   const steps = [];
+  const deploymentTargetArgs = [
+    path.join(KIT_ROOT, 'scripts', 'inspect-deployment-target.mjs'),
+    '--site-root',
+    options.siteRoot
+  ];
+
+  if (options.vercelProjectUrl) {
+    deploymentTargetArgs.push('--vercel-project-url', options.vercelProjectUrl);
+  }
+  if (options.vercelScope) {
+    deploymentTargetArgs.push('--vercel-scope', options.vercelScope);
+  }
+  if (options.vercelProject) {
+    deploymentTargetArgs.push('--vercel-project', options.vercelProject);
+  }
 
   if (options.skipFullQa) {
     steps.push({
@@ -228,11 +252,7 @@ function buildSteps(options) {
       id: 'deployment_target',
       label: 'Deployment target readiness refresh',
       command: process.execPath,
-      args: [
-        path.join(KIT_ROOT, 'scripts', 'inspect-deployment-target.mjs'),
-        '--site-root',
-        options.siteRoot
-      ]
+      args: deploymentTargetArgs
     },
     {
       id: 'handoff',
@@ -407,6 +427,9 @@ function printHelp() {
     '  --site-event-probe       Execute SDK event probe during applied store runtime QA',
     '  --site-production-probe  Execute SDK/runtime QA against npm run start after site build',
     '  --skip-full-qa           Regenerate handoff/external setup/audit/dashboard from existing QA evidence',
+    '  --vercel-project-url URL  Expected Vercel project URL to verify during deployment target refresh',
+    '  --vercel-scope <name>     Expected Vercel scope/team slug',
+    '  --vercel-project <name>   Expected Vercel project name or id',
     '  --open-dashboard         Open dist/growth-ops-dashboard.html after refresh',
     '  --report <path>          JSON refresh report output'
   ].join('\n'));

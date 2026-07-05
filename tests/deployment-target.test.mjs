@@ -12,6 +12,7 @@ import {
   extractJsonObject,
   inspectDeploymentTarget,
   parseArgs,
+  parseVercelProjectUrl,
   quoteShell,
   rankVercelProjects,
   renderMarkdown
@@ -24,12 +25,22 @@ test('parses deployment target arguments and quotes shell commands', () => {
     '--output',
     '/tmp/deploy.md',
     '--json-output',
-    '/tmp/deploy.json'
+    '/tmp/deploy.json',
+    '--vercel-project-url',
+    'https://vercel.com/petasos/auto-marketing'
   ]);
 
   assert.equal(parsed.siteRoot, '/tmp/store root');
   assert.equal(parsed.output, '/tmp/deploy.md');
   assert.equal(parsed.jsonOutput, '/tmp/deploy.json');
+  assert.equal(parsed.vercelProjectUrl, 'https://vercel.com/petasos/auto-marketing');
+  assert.deepEqual(parseVercelProjectUrl('https://vercel.com/petasos/auto-marketing'), {
+    ok: true,
+    url: 'https://vercel.com/petasos/auto-marketing',
+    scope: 'petasos',
+    project: 'auto-marketing',
+    error: ''
+  });
   assert.equal(quoteShell('/tmp/store root'), "'/tmp/store root'");
   assert.equal(commandString(['vercel', '--cwd', '/tmp/store root', 'deploy', '--prod']), "vercel --cwd '/tmp/store root' deploy --prod");
 });
@@ -228,6 +239,154 @@ test('does not auto-recommend a weak Vercel candidate even when URL is reachable
     assert.equal(report.hosting.vercel.projects.recommended, null);
     assert.equal(report.hosting.vercel.projects.candidates[0].url_probe.status, 200);
     assert.equal(report.commands.find((command) => command.id === 'vercel_link').command.includes('<project-name-or-id>'), true);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('reports a user-provided Vercel project URL when the scope is inaccessible', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-deploy-target-scope-'));
+
+  try {
+    await writeFile(path.join(tmp, 'package.json'), JSON.stringify({
+      name: 'oliveyoung-shopee',
+      scripts: {
+        build: 'next build',
+        start: 'next start'
+      },
+      dependencies: {
+        next: '16.1.6'
+      }
+    }));
+    await writeFile(path.join(tmp, '.env.local'), [
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=http://localhost:3000',
+      'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+      ''
+    ].join('\n'));
+
+    const report = await inspectDeploymentTarget({
+      siteRoot: tmp,
+      vercelProjectUrl: 'https://vercel.com/petasos/auto-marketing'
+    }, {
+      runCommand: async (command, args) => {
+        if (command === 'vercel' && args[0] === '--version') {
+          return { ok: true, stdout: 'Vercel CLI 50.25.4\n', stderr: '' };
+        }
+        if (command === 'vercel' && args[0] === 'whoami') {
+          return { ok: true, stdout: 'leecg39-8923\n', stderr: '' };
+        }
+        if (command === 'vercel' && args.join(' ') === 'projects ls --format=json') {
+          return {
+            ok: true,
+            stdout: JSON.stringify({
+              projects: [],
+              contextName: 'annatars-projects'
+            }),
+            stderr: ''
+          };
+        }
+        if (command === 'vercel' && args.join(' ') === 'projects ls --scope petasos --format=json') {
+          return {
+            ok: false,
+            stdout: '',
+            stderr: 'Error: The specified scope does not exist\n'
+          };
+        }
+        return { ok: false, stdout: '', stderr: `unexpected command: ${args.join(' ')}` };
+      }
+    });
+    const markdown = renderMarkdown(report);
+
+    assert.equal(report.ready_for_production_deploy, false);
+    assert.equal(report.hosting.vercel.target_project.provided, true);
+    assert.equal(report.hosting.vercel.target_project.scope, 'petasos');
+    assert.equal(report.hosting.vercel.target_project.project, 'auto-marketing');
+    assert.equal(report.hosting.vercel.target_project.accessible, false);
+    assert.match(report.hosting.vercel.target_project.error, /scope does not exist/);
+    assert.equal(report.blockers.some((blocker) => blocker.id === 'target_vercel_project_inaccessible'), true);
+    assert.match(report.next_step, /petasos/);
+    assert.match(markdown, /petasos\/auto-marketing/);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('uses an accessible user-provided Vercel project as the recommended target', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-deploy-target-explicit-'));
+
+  try {
+    await writeFile(path.join(tmp, 'package.json'), JSON.stringify({
+      name: 'oliveyoung-shopee',
+      scripts: {
+        build: 'next build',
+        start: 'next start'
+      },
+      dependencies: {
+        next: '16.1.6'
+      }
+    }));
+    await writeFile(path.join(tmp, '.env.local'), [
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=http://localhost:3000',
+      'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+      ''
+    ].join('\n'));
+
+    const report = await inspectDeploymentTarget({
+      siteRoot: tmp,
+      vercelProjectUrl: 'https://vercel.com/petasos/auto-marketing'
+    }, {
+      runCommand: async (command, args) => {
+        if (command === 'vercel' && args[0] === '--version') {
+          return { ok: true, stdout: 'Vercel CLI 50.25.4\n', stderr: '' };
+        }
+        if (command === 'vercel' && args[0] === 'whoami') {
+          return { ok: true, stdout: 'leecg39-8923\n', stderr: '' };
+        }
+        if (command === 'vercel' && args.join(' ') === 'projects ls --format=json') {
+          return {
+            ok: true,
+            stdout: JSON.stringify({
+              projects: [],
+              contextName: 'annatars-projects'
+            }),
+            stderr: ''
+          };
+        }
+        if (command === 'vercel' && args.join(' ') === 'projects ls --scope petasos --format=json') {
+          return {
+            ok: true,
+            stdout: JSON.stringify({
+              projects: [
+                {
+                  name: 'auto-marketing',
+                  id: 'prj_auto123',
+                  latestProductionUrl: 'https://auto-marketing-petasos.vercel.app'
+                }
+              ],
+              contextName: 'petasos'
+            }),
+            stderr: ''
+          };
+        }
+        return { ok: false, stdout: '', stderr: `unexpected command: ${args.join(' ')}` };
+      },
+      probeUrl: async () => ({
+        checked: true,
+        ok: true,
+        status: 200,
+        title: 'Auto Marketing',
+        error: ''
+      })
+    });
+
+    assert.equal(report.hosting.vercel.target_project.accessible, true);
+    assert.equal(report.hosting.vercel.target_project.project_id, 'prj_auto123');
+    assert.equal(report.hosting.vercel.projects.recommended.id, 'prj_auto123');
+    assert.equal(report.hosting.vercel.projects.recommended.reasons.includes('explicit_target'), true);
+    assert.equal(report.commands.find((command) => command.id === 'vercel_link').command.includes('prj_auto123'), true);
+    assert.equal(report.blockers.some((blocker) => blocker.id === 'target_vercel_project_inaccessible'), false);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

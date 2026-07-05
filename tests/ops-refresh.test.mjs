@@ -25,6 +25,8 @@ test('parses ops refresh arguments', () => {
     '3200',
     '--timeout-ms',
     '1000',
+    '--vercel-project-url',
+    'https://vercel.com/petasos/auto-marketing',
     '--report',
     '/tmp/report.json'
   ]);
@@ -37,6 +39,7 @@ test('parses ops refresh arguments', () => {
   assert.equal(parsed.siteProductionProbe, true);
   assert.equal(parsed.sitePort, 3200);
   assert.equal(parsed.timeoutMs, 1000);
+  assert.equal(parsed.vercelProjectUrl, 'https://vercel.com/petasos/auto-marketing');
   assert.equal(parsed.report, '/tmp/report.json');
 });
 
@@ -71,6 +74,21 @@ test('passes site event probe flag through to full QA', () => {
 
   assert.equal(fullQa.args.includes('--site-event-probe'), true);
   assert.equal(fullQa.args.includes('--site-production-probe'), true);
+});
+
+test('passes Vercel target project through to deployment inspection', () => {
+  const options = parseArgs([
+    '--site-root',
+    '/tmp/store',
+    '--skip-full-qa',
+    '--vercel-project-url',
+    'https://vercel.com/petasos/auto-marketing'
+  ]);
+  const steps = buildSteps(options);
+  const deploymentTarget = steps.find((step) => step.id === 'deployment_target');
+
+  assert.equal(deploymentTarget.args.includes('--vercel-project-url'), true);
+  assert.equal(deploymentTarget.args.includes('https://vercel.com/petasos/auto-marketing'), true);
 });
 
 test('extracts first JSON object from command stdout', () => {
