@@ -20,6 +20,7 @@
 - `scripts/generate-ops-dashboard.mjs`: QA/완료 감사/handoff 결과를 한 화면으로 묶는 운영 대시보드 생성기
 - `scripts/refresh-ops-status.mjs`: full QA, handoff, 완료 감사, 운영 대시보드를 한 번에 갱신하는 오케스트레이터
 - `scripts/verify-vercel-production.mjs`: Vercel production 루트/데모/대시보드/API와 브라우저 autorun 검증기
+- `scripts/generate-vercel-env-plan.mjs`: Vercel production env에 바로 넣을 값과 외부 계정값을 분리하는 입력 계획 생성기
 - `index.html`, `api/crm/events.js`, `api/marketing/env-status.js`, `vercel.json`: Vercel production URL에서 바로 열리는 데모/대시보드/CRM 이벤트 API/env readiness 표면
 
 ## 1. 사이트 공통 레이아웃에 SDK 추가
@@ -78,6 +79,7 @@ npm run verify:site -- --site-url http://127.0.0.1:3000 --event-probe
 npm run verify:prod-site -- --site-root /path/to/your-store --build --event-probe
 npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app
 npm run verify:vercel -- --base-url https://auto-marketing-sigma.vercel.app --require-env-ready
+npm run plan:vercel-env -- --site-root /path/to/your-store --base-url https://auto-marketing-sigma.vercel.app
 npm run inspect:deployment -- --site-root /path/to/your-store
 npm run inspect:deployment -- --site-root /path/to/your-store --vercel-project-url https://vercel.com/team/project
 npm run reconcile:revenue -- --orders examples/orders-revenue.csv --ga4 examples/ga4-revenue.csv
@@ -108,6 +110,8 @@ npm run dashboard:ops -- --site-root /path/to/your-store
 ```
 
 전체 QA 리포트는 기본적으로 `dist/full-qa-report.json`에 저장됩니다. 완료 감사 결과는 `dist/completion-audit.md`와 `dist/completion-audit.json`에 저장되며, 운영 계정값이 없으면 해당 요구사항을 `blocked_external`로 표시합니다. 배포 대상 점검은 `dist/deployment-target-plan.md`와 `dist/deployment-target-plan.json`에 저장됩니다. 운영 대시보드는 `dist/growth-ops-dashboard.html`과 `dist/growth-ops-dashboard.json`에 저장됩니다. 외부 계정 실행 체크리스트는 `dist/external-account-setup.md`와 `dist/external-account-setup.json`에 저장됩니다. 전체 갱신 리포트는 `dist/ops-refresh-report.json`에 저장됩니다.
+
+Vercel production env 입력 계획은 `dist/vercel-env-plan.md`와 `dist/vercel-env-plan.json`에 저장됩니다. `ready_to_add` 값은 현재 production URL과 서버리스 route에서 확정된 값이고, `needs_external_value` 값은 GTM/GA4/광고/CRM 계정에서 확인해야 합니다.
 
 운영 계정값을 입력할 사람에게 넘길 체크리스트와 env 블록은 아래 명령으로 생성합니다.
 
