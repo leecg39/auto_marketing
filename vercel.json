@@ -6,7 +6,7 @@
     },
     {
       "source": "/dashboard",
-      "destination": "/dist/growth-ops-dashboard.html"
+      "destination": "/dashboard.html"
     }
   ],
   "headers": [

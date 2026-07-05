@@ -107,7 +107,8 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   const rewrites = new Map(vercelConfig.rewrites.map((rewrite) => [rewrite.source, rewrite.destination]));
 
   assert.equal(rewrites.get('/demo'), '/examples/demo-store.html');
-  assert.equal(rewrites.get('/dashboard'), '/dist/growth-ops-dashboard.html');
+  assert.equal(rewrites.get('/dashboard'), '/dashboard.html');
   assert.match(index, /href="\/demo\?crm=\/api\/crm\/events&autorun=1"/);
   assert.match(index, /id="probe" type="button"/);
+  assert.match(await readFile(path.join(kitRoot, 'dashboard.html'), 'utf8'), /Marketing Automation Dashboard/);
 });

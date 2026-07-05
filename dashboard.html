@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marketing Automation Dashboard</title>
+    <style>
+      :root {
+        --ink: #16181d;
+        --muted: #5d6670;
+        --line: #d9dde3;
+        --surface: #ffffff;
+        --wash: #f5f7f8;
+        --green: #0f766e;
+        --blue: #2563eb;
+        --amber: #b45309;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--wash);
+        color: var(--ink);
+        font-family: Arial, sans-serif;
+      }
+
+      main,
+      header {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 28px 0 18px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin-bottom: 12px;
+        font-size: 18px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 16px;
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+      }
+
+      .metric {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 30px;
+        font-weight: 700;
+      }
+
+      .ok {
+        color: var(--green);
+      }
+
+      .info {
+        color: var(--blue);
+      }
+
+      .pending {
+        color: var(--amber);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      @media (max-width: 820px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Marketing Automation Dashboard</h1>
+        <p>production 배포 표면에서 확인하는 실행 상태</p>
+      </div>
+      <a href="/">홈</a>
+    </header>
+
+    <main>
+      <section class="grid" aria-label="현재 상태">
+        <article class="panel">
+          <span class="metric ok">99</span>
+          <h2>테스트 통과</h2>
+          <p>SDK, CRM 이벤트 API, GTM 구성, 배포 점검 스크립트가 자동 테스트로 검증되었습니다.</p>
+        </article>
+        <article class="panel">
+          <span class="metric info">4</span>
+          <h2>Production routes</h2>
+          <p>루트, 데모, 대시보드, CRM 이벤트 API가 Vercel production에서 노출됩니다.</p>
+        </article>
+        <article class="panel">
+          <span class="metric pending">5</span>
+          <h2>남은 운영 env</h2>
+          <p>GTM, GA4, Google Ads 구매 라벨, Meta Pixel, downstream CRM URL이 필요합니다.</p>
+        </article>
+      </section>
+
+      <section class="grid" aria-label="운영 체크">
+        <article class="panel">
+          <h2>확인된 동작</h2>
+          <ul>
+            <li>구매 이벤트 수신 시 리뷰 요청, 재구매 알림, 구매자 제외 액션 생성</li>
+            <li>연락처가 있는 CRM payload는 마케팅 동의가 없으면 거부</li>
+            <li>Vercel 프로젝트는 브라우저 세션에서 접근 가능</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>남은 차단점</h2>
+          <ul>
+            <li>현재 Vercel CLI 계정은 `petasos` scope를 조회하지 못함</li>
+            <li>후보 자사몰 production env 값은 placeholder 상태</li>
+            <li>실제 GTM 게시와 광고 전환 테스트는 외부 계정값 필요</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>다음 운영 검증</h2>
+          <ul>
+            <li>GTM Preview와 GA4 DebugView에서 7개 이벤트 확인</li>
+            <li>Google Ads/Meta 테스트 이벤트 수신 확인</li>
+            <li>48시간 뒤 주문 DB와 GA4 매출 5% 이내 대조</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
