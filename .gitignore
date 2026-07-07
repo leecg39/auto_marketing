@@ -10,3 +10,6 @@ dist/
 !.env.example
 
 *.backup-*
+
+# SEO Office (독립 git 저장소 — 한글 패치는 seo-os/ 내부에 커밋됨)
+seo-os/

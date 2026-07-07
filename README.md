@@ -14,6 +14,8 @@
 - `docs/live-deployment.md`: 실제 자사몰 적용 절차
 - `docs/execution-status.md`: 이 컴퓨터에서 실행/검증된 상태
 - `docs/oliveyoung-shopee-go-live.md`: 현재 Vercel/GTM/GA4 리소스 기준 운영 전환 runbook
+- `docs/seo-os-integration.md`: SEO Office(seo-os) 설치·한글 패치·마케팅 자동화 연동 설계
+- `seo-os/`: [AgriciDaniel/seo-os](https://github.com/AgriciDaniel/seo-os) 클론 + 한글 패치 (독립 git 저장소, 킷 저장소에서는 제외)
 - `examples/demo-store.html`: 이벤트 동작 확인용 데모 페이지
 - `examples/marketing-production.env.example`: 운영 GTM/GA4/광고/CRM 값 입력용 env 예시
 - `examples/oliveyoung-shopee.production.env.example`: 현재 Vercel/GTM/GA4 공개값이 들어간 프로젝트 전용 운영 env 후보
