@@ -640,6 +640,8 @@ test('Vercel static surface exposes the demo and dashboard routes', async () => 
   assert.match(index, /src="\/src\/marketing-runtime\.js"/);
   assert.match(demo, /src="\/api\/marketing\/client-config\.js"/);
   assert.match(demo, /runtimeConfig\.gtmId/);
+  assert.match(demo, /includeDemoContacts = crmWebhookUrl !== '\/api\/crm\/events'/);
+  assert.match(demo, /function demoContactFields\(includePhone\)/);
   assert.match(dashboard, /Marketing Automation Dashboard/);
   assert.match(dashboard, /id="env-next-actions"/);
   assert.match(dashboard, /실행 전 확인 필요/);

@@ -104,6 +104,7 @@
       var crmWebhookUrl = params.get('crm') || runtimeConfig.crmWebhookUrl || 'http://localhost:8787/crm/events';
       var gtmId = params.get('gtm') || runtimeConfig.gtmId || '';
       var defaultCurrency = params.get('currency') || runtimeConfig.defaultCurrency || 'KRW';
+      var includeDemoContacts = crmWebhookUrl !== '/api/crm/events';
 
       MarketingAutomation.init({
         gtmId: gtmId,
@@ -164,6 +165,17 @@
         return Promise.resolve({ event_name: 'consent' });
       }
 
+      function demoContactFields(includePhone) {
+        if (!includeDemoContacts) {
+          return { marketing_consent: true };
+        }
+
+        return Object.assign({
+          email: 'test@example.com',
+          marketing_consent: true
+        }, includePhone ? { phone: '01012345678' } : {});
+      }
+
       function trackView() {
         MarketingAutomation.trackViewItem(product);
         render('최근 이벤트: ' + lastDataLayerEvent() + ' / CRM: not sent');
@@ -171,12 +183,10 @@
       }
 
       function trackSignUp() {
-        var payload = {
+        var payload = Object.assign({
           method: 'email',
-          user_id: 'USER-001',
-          email: 'test@example.com',
-          marketing_consent: true
-        };
+          user_id: 'USER-001'
+        }, demoContactFields(false));
         MarketingAutomation.trackSignUp(payload);
         return handleCrm('sign_up', payload);
       }
@@ -192,35 +202,28 @@
       }
 
       function trackCart() {
-        var payload = Object.assign({}, product, {
-          email: 'test@example.com',
-          marketing_consent: true
-        });
+        var payload = Object.assign({}, product, demoContactFields(false));
         MarketingAutomation.trackAddToCart(payload);
         return handleCrm('add_to_cart', payload);
       }
 
       function trackCheckout() {
-        var payload = {
+        var payload = Object.assign({
           cart_id: 'CART-001',
           value: 129000,
-          items: [product],
-          email: 'test@example.com',
-          marketing_consent: true
-        };
+          items: [product]
+        }, demoContactFields(false));
         MarketingAutomation.trackBeginCheckout(payload);
         return handleCrm('begin_checkout', payload);
       }
 
       function trackPurchase(transactionId) {
-        var payload = {
+        var payload = Object.assign({
           transaction_id: transactionId || 'ORDER-' + Date.now(),
           value: 129000,
           shipping: 0,
-          items: [product],
-          email: 'test@example.com',
-          marketing_consent: true
-        };
+          items: [product]
+        }, demoContactFields(false));
         var event = MarketingAutomation.trackPurchase(payload);
         if (event && event.skipped) {
           render('최근 이벤트: purchase skipped / ' + event.reason);
@@ -230,12 +233,9 @@
       }
 
       function trackLead() {
-        var payload = {
-          value: 10000,
-          email: 'test@example.com',
-          phone: '01012345678',
-          marketing_consent: true
-        };
+        var payload = Object.assign({
+          value: 10000
+        }, demoContactFields(true));
         MarketingAutomation.trackGenerateLead(payload);
         return handleCrm('generate_lead', payload);
       }
