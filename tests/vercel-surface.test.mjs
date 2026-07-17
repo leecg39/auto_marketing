@@ -244,6 +244,52 @@ test('Vercel env readiness API reports missing runtime values', async () => {
   }
 });
 
+test('Vercel env readiness includes first-party delivery gateway credentials', async () => {
+  const gatewayKeys = [
+    'DOWNSTREAM_CRM_API_KEY',
+    'CRM_DELIVERY_MODE',
+    'CRM_TEST_RECIPIENTS',
+    'UPSTASH_REDIS_REST_URL',
+    'UPSTASH_REDIS_REST_TOKEN',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
+    'SOLAPI_API_KEY',
+    'SOLAPI_API_SECRET',
+    'SOLAPI_KAKAO_PF_ID'
+  ];
+  const keys = [...new Set([...ENV_KEYS, ...gatewayKeys])];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+
+  try {
+    Object.assign(process.env, {
+      NEXT_PUBLIC_GTM_ID: 'GTM-ABCDE12',
+      NEXT_PUBLIC_CRM_WEBHOOK_URL: '/api/crm/events',
+      NEXT_PUBLIC_APP_URL: 'https://auto-marketing-sigma.vercel.app',
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://auto-marketing-sigma.vercel.app/api/crm/downstream',
+      NEXT_PUBLIC_GA4_MEASUREMENT_ID: 'G-ABCDE12345',
+      NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: 'AW-123456789',
+      NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: 'purchaseLabel123',
+      NEXT_PUBLIC_META_PIXEL_ID: '123456789'
+    });
+    for (const key of gatewayKeys) {
+      delete process.env[key];
+    }
+
+    const result = await invoke(envStatusHandler, 'GET');
+
+    assert.equal(result.body.ready, false);
+    assert.equal(result.body.summary.missing.includes('RESEND_API_KEY'), true);
+    assert.equal(result.body.summary.missing.includes('SOLAPI_KAKAO_PF_ID'), true);
+    assert.equal(result.body.next_actions.some((action) => action.id === 'delivery_gateway'), true);
+    assert.equal(JSON.stringify(result.body).includes('re_secret'), false);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
 test('Vercel client config API exposes only browser-safe runtime values', async () => {
   const previous = Object.fromEntries(ENV_KEYS.concat([
     'NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY'

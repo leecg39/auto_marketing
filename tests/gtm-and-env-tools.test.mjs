@@ -120,6 +120,50 @@ test('deployment env validator reports ready only for real-looking IDs', async (
   }
 });
 
+test('self-hosted delivery gateway requires both providers, Redis, auth, and test allowlist', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-gateway-'));
+
+  try {
+    const base = [
+      'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
+      'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+      'NEXT_PUBLIC_APP_URL=https://store.example.test',
+      'DOWNSTREAM_CRM_WEBHOOK_URL=https://store.example.test/api/crm/downstream',
+      'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCD123456',
+      'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+      'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=Purchase_Label_123',
+      'NEXT_PUBLIC_META_PIXEL_ID=1234567890'
+    ];
+    await writeFile(path.join(tmp, '.env.local'), `${base.join('\n')}\n`);
+
+    const missing = await validateDeploymentEnv(tmp);
+    assert.equal(missing.ready, false);
+    assert.equal(missing.summary.missing.includes('RESEND_API_KEY'), true);
+    assert.equal(missing.summary.missing.includes('SOLAPI_KAKAO_PF_ID'), true);
+    assert.equal(missing.summary.missing.includes('CRM_TEST_RECIPIENTS'), true);
+
+    await writeFile(path.join(tmp, '.env.local'), `${[
+      ...base,
+      'DOWNSTREAM_CRM_API_KEY=random-token-with-at-least-24-chars',
+      'CRM_DELIVERY_MODE=test',
+      'CRM_TEST_RECIPIENTS=buyer@example.test,01012345678',
+      'UPSTASH_REDIS_REST_URL=https://redis.example.test',
+      'UPSTASH_REDIS_REST_TOKEN=upstash-token-value',
+      'RESEND_API_KEY=re_example_key',
+      'RESEND_FROM_EMAIL=Store <hello@example.test>',
+      'SOLAPI_API_KEY=solapi-key',
+      'SOLAPI_API_SECRET=solapi-secret-value',
+      'SOLAPI_KAKAO_PF_ID=PF_TEST'
+    ].join('\n')}\n`);
+
+    const ready = await validateDeploymentEnv(tmp);
+    assert.equal(ready.ready, true);
+    assert.deepEqual(ready.summary.missing, []);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
 test('deployment env validator flags placeholders and missing downstream CRM', async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-'));
 

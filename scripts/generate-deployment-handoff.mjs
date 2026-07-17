@@ -20,6 +20,56 @@ const EXTRA_ENV_KEYS = [
     placeholder: 'replace-with-crm-api-key'
   },
   {
+    key: 'CRM_DELIVERY_MODE',
+    label: 'Delivery safety mode',
+    placeholder: 'test'
+  },
+  {
+    key: 'CRM_TEST_RECIPIENTS',
+    label: 'Test recipient allowlist',
+    placeholder: 'test@example.com,01012345678'
+  },
+  {
+    key: 'UPSTASH_REDIS_REST_URL',
+    label: 'Upstash Redis REST URL',
+    placeholder: 'https://your-redis.upstash.io'
+  },
+  {
+    key: 'UPSTASH_REDIS_REST_TOKEN',
+    label: 'Upstash Redis REST token',
+    placeholder: 'replace-with-upstash-token'
+  },
+  {
+    key: 'RESEND_API_KEY',
+    label: 'Resend API key',
+    placeholder: 're_replace-with-resend-key'
+  },
+  {
+    key: 'RESEND_FROM_EMAIL',
+    label: 'Verified Resend sender',
+    placeholder: 'Store <hello@your-domain.example>'
+  },
+  {
+    key: 'SOLAPI_API_KEY',
+    label: 'SOLAPI API key',
+    placeholder: 'replace-with-solapi-key'
+  },
+  {
+    key: 'SOLAPI_API_SECRET',
+    label: 'SOLAPI API secret',
+    placeholder: 'replace-with-solapi-secret'
+  },
+  {
+    key: 'SOLAPI_KAKAO_PF_ID',
+    label: 'SOLAPI Kakao profile ID',
+    placeholder: 'replace-with-kakao-profile-id'
+  },
+  {
+    key: 'SOLAPI_KAKAO_TARGETING',
+    label: 'Kakao Brand Message targeting mode',
+    placeholder: 'I'
+  },
+  {
     key: 'NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY',
     label: 'Default ecommerce currency',
     placeholder: 'KRW'
@@ -35,7 +85,17 @@ const PLACEHOLDER_BY_KEY = {
   NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: 'AW-XXXXXXXXX',
   NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: 'replace-with-purchase-label',
   NEXT_PUBLIC_META_PIXEL_ID: 'replace-with-meta-pixel-id',
-  DOWNSTREAM_CRM_API_KEY: 'replace-with-crm-api-key',
+  DOWNSTREAM_CRM_API_KEY: 'replace-with-crm-api-key-at-least-24-characters',
+  CRM_DELIVERY_MODE: 'test',
+  CRM_TEST_RECIPIENTS: 'test@example.com,01012345678',
+  UPSTASH_REDIS_REST_URL: 'https://your-redis.upstash.io',
+  UPSTASH_REDIS_REST_TOKEN: 'replace-with-upstash-token',
+  RESEND_API_KEY: 're_replace-with-resend-key',
+  RESEND_FROM_EMAIL: 'Store <hello@your-domain.example>',
+  SOLAPI_API_KEY: 'replace-with-solapi-key',
+  SOLAPI_API_SECRET: 'replace-with-solapi-secret',
+  SOLAPI_KAKAO_PF_ID: 'replace-with-kakao-profile-id',
+  SOLAPI_KAKAO_TARGETING: 'I',
   NEXT_PUBLIC_MARKETING_DEFAULT_CURRENCY: 'KRW'
 };
 
@@ -96,7 +156,7 @@ function buildRequiredInputs(envReport) {
     ...EXTRA_ENV_KEYS.map((entry) => ({
       key: entry.key,
       label: entry.label,
-      status: 'manual_check',
+      status: statuses.get(entry.key)?.status || 'manual_check',
       required_for: ['downstream_auth'],
       placeholder: entry.placeholder
     }))

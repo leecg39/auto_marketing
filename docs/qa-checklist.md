@@ -45,6 +45,10 @@
 
 - [ ] `marketing_consent: true`인 테스트 계정에만 이메일/카카오가 발송된다.
 - [ ] 수신거부 계정에는 자동화 메시지가 발송되지 않는다.
+- [ ] `CRM_DELIVERY_MODE=test`에서 `CRM_TEST_RECIPIENTS` 외 수신자는 `test_recipient_not_allowed`로 차단된다.
+- [ ] `/api/crm/downstream` POST는 올바른 Bearer 토큰 없이는 `401`을 반환한다.
+- [ ] Upstash Redis 장애 시 예약 메시지를 성공 처리하지 않고 공급자 예약을 취소한다.
+- [ ] 구매 이벤트가 같은 사용자/장바구니의 이메일 및 카카오 이탈 예약을 취소한다.
 - [ ] CRM 응답의 `automation_actions`에 예약 시각, 채널, 취소 조건이 포함된다.
 - [ ] CRM 수신 서버가 downstream webhook으로 payload를 전달하고 `202` 응답을 받는다.
 - [ ] 장바구니 이탈 플로우는 구매 완료 고객을 제외한다.

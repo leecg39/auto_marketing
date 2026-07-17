@@ -63,6 +63,26 @@ const ACTION_CATALOG = [
     confirmation_reason: '고객 연락처와 마케팅 이벤트를 외부 메시징 공급자로 전송할 수 있습니다.'
   },
   {
+    id: 'delivery_gateway',
+    title: '이메일/카카오 발송 공급자 연결',
+    service: 'Resend, SOLAPI, Upstash Redis',
+    keys: [
+      'DOWNSTREAM_CRM_API_KEY',
+      'CRM_DELIVERY_MODE',
+      'CRM_TEST_RECIPIENTS',
+      'UPSTASH_REDIS_REST_URL',
+      'UPSTASH_REDIS_REST_TOKEN',
+      'RESEND_API_KEY',
+      'RESEND_FROM_EMAIL',
+      'SOLAPI_API_KEY',
+      'SOLAPI_API_SECRET',
+      'SOLAPI_KAKAO_PF_ID'
+    ],
+    action: 'Resend, SOLAPI, Upstash Redis 자격 증명을 연결하고 테스트 수신자 허용 목록으로 실제 발송을 검증하세요.',
+    confirmation_required: true,
+    confirmation_reason: '외부 공급자 API 자격 증명을 생성하고 Vercel에 지속 접근 권한으로 저장합니다.'
+  },
+  {
     id: 'browser_crm_endpoint',
     title: '브라우저 CRM endpoint 연결',
     service: 'Storefront',
@@ -123,9 +143,15 @@ async function handler(request, response) {
     return;
   }
 
-  const { REQUIREMENTS, classifyRequirement, summarize } = await loadEnvValidator();
-  const values = runtimeValues(REQUIREMENTS);
-  const checks = REQUIREMENTS.map((requirement) => ({
+  const {
+    DELIVERY_GATEWAY_REQUIREMENTS,
+    REQUIREMENTS,
+    classifyRequirement,
+    deploymentRequirements,
+    summarize
+  } = await loadEnvValidator();
+  const values = runtimeValues([...REQUIREMENTS, ...DELIVERY_GATEWAY_REQUIREMENTS]);
+  const checks = deploymentRequirements(values).map((requirement) => ({
     ...classifyRequirement(requirement, values),
     has_value: Boolean(values[requirement.key])
   }));

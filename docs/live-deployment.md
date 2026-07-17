@@ -60,19 +60,30 @@ GTM Preview에서 모든 이벤트를 본 뒤 게시합니다. 광고 태그는 
 
 ## CRM 연결
 
-`server/crm-event-receiver.mjs`는 중간 수신 서버입니다. 운영에서는 아래 환경변수를 설정합니다.
+`/api/crm/events`는 이벤트와 자동화 액션을 계산하고 `/api/crm/downstream`으로 전달합니다. 자체 delivery gateway는 Resend 이메일, SOLAPI 카카오 브랜드 메시지, Upstash Redis 예약 취소 인덱스를 사용합니다.
 
 ```bash
-PORT=8791
-CORS_ALLOW_ORIGIN=https://your-store.example
-DOWNSTREAM_CRM_WEBHOOK_URL=https://your-crm.example/webhook
-DOWNSTREAM_CRM_API_KEY=replace-me
-node server/crm-event-receiver.mjs
+DOWNSTREAM_CRM_WEBHOOK_URL=https://your-store.example/api/crm/downstream
+DOWNSTREAM_CRM_API_KEY=replace-with-at-least-24-random-characters
+CRM_DELIVERY_MODE=test
+CRM_TEST_RECIPIENTS=test@example.com,01012345678
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=replace-with-upstash-token
+RESEND_API_KEY=re_replace-with-resend-key
+RESEND_FROM_EMAIL=Store <hello@your-domain.example>
+SOLAPI_API_KEY=replace-with-solapi-key
+SOLAPI_API_SECRET=replace-with-solapi-secret
+SOLAPI_KAKAO_PF_ID=replace-with-kakao-profile-id
+SOLAPI_KAKAO_TARGETING=I
 ```
+
+`DOWNSTREAM_CRM_API_KEY`는 `/api/crm/events`의 전달 토큰이자 `/api/crm/downstream`의 Bearer 검증 값입니다. `CRM_DELIVERY_MODE=test`에서는 `CRM_TEST_RECIPIENTS`에 정확히 일치하는 이메일/전화번호에만 발송됩니다. 공급자 QA와 수신동의 차단 검증이 끝나기 전에는 `live`로 전환하지 않습니다.
+
+Resend 발신 도메인과 SOLAPI 카카오 채널 프로필은 각 공급자에서 먼저 인증해야 합니다. 예약 발송은 공급자 네이티브 예약 기능을 사용하고, Upstash Redis에는 개인정보 원문 대신 해시 인덱스와 공급자 예약 ID만 저장합니다. `purchase`가 수신되면 같은 사용자, 이메일, 전화번호 또는 장바구니에 연결된 이탈 메시지 예약을 취소합니다.
 
 로컬에서는 `npm run start:local`이 downstream CRM 시뮬레이터까지 함께 실행합니다. 이 상태에서 `npm run verify:local`은 CRM 수신 서버가 downstream webhook으로 payload를 전달하고 `202`를 받는지 확인합니다.
 
-수신거부, 마케팅 수신동의, 발송 빈도 제한은 최종 발송툴에서도 한 번 더 검증해야 합니다.
+수신거부와 발송 빈도 제한은 공급자 계정에서도 한 번 더 설정해야 합니다. 서버는 `marketing_consent === true`, 테스트 허용 목록, 이벤트/채널별 idempotency를 강제합니다.
 
 CRM 수신 서버는 이벤트별로 `automation_actions`를 함께 계산합니다.
 

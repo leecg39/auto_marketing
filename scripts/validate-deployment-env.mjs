@@ -68,6 +68,100 @@ const REQUIREMENTS = [
   }
 ];
 
+const DELIVERY_GATEWAY_REQUIREMENTS = [
+  {
+    key: 'DOWNSTREAM_CRM_API_KEY',
+    label: 'Delivery gateway Bearer token',
+    required_for: ['delivery_gateway_auth'],
+    pattern: /^.{24,}$/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'CRM_DELIVERY_MODE',
+    label: 'Delivery safety mode',
+    required_for: ['test_recipient_safety'],
+    pattern: /^(test|live)$/,
+    placeholder: /^$/
+  },
+  {
+    key: 'CRM_TEST_RECIPIENTS',
+    label: 'Test delivery recipient allowlist',
+    required_for: ['test_recipient_safety'],
+    pattern: /^.+$/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'UPSTASH_REDIS_REST_URL',
+    label: 'Upstash Redis REST URL',
+    required_for: ['delivery_idempotency', 'scheduled_delivery_cancellation'],
+    pattern: /^https:\/\/.+/i,
+    placeholder: /^https:\/\/your-|^$/i
+  },
+  {
+    key: 'UPSTASH_REDIS_REST_TOKEN',
+    label: 'Upstash Redis REST token',
+    required_for: ['delivery_idempotency', 'scheduled_delivery_cancellation'],
+    pattern: /^.{12,}$/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'RESEND_API_KEY',
+    label: 'Resend API key',
+    required_for: ['email_delivery'],
+    pattern: /^re_.+/i,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'RESEND_FROM_EMAIL',
+    label: 'Verified email sender',
+    required_for: ['email_delivery'],
+    pattern: /@.+\..+/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'SOLAPI_API_KEY',
+    label: 'SOLAPI API key',
+    required_for: ['kakao_brand_message'],
+    pattern: /^.{8,}$/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'SOLAPI_API_SECRET',
+    label: 'SOLAPI API secret',
+    required_for: ['kakao_brand_message'],
+    pattern: /^.{12,}$/,
+    placeholder: /^replace-with-|^$/i
+  },
+  {
+    key: 'SOLAPI_KAKAO_PF_ID',
+    label: 'SOLAPI Kakao channel profile ID',
+    required_for: ['kakao_brand_message'],
+    pattern: /^.+$/,
+    placeholder: /^replace-with-|^$/i
+  }
+];
+
+function usesSelfHostedDeliveryGateway(value) {
+  try {
+    return new URL(value).pathname === '/api/crm/downstream';
+  } catch {
+    return value === '/api/crm/downstream';
+  }
+}
+
+function deploymentRequirements(values) {
+  if (!usesSelfHostedDeliveryGateway(values.DOWNSTREAM_CRM_WEBHOOK_URL)) {
+    return REQUIREMENTS;
+  }
+
+  return [
+    ...REQUIREMENTS,
+    ...DELIVERY_GATEWAY_REQUIREMENTS.filter((requirement) =>
+      requirement.key !== 'CRM_TEST_RECIPIENTS' || (values.CRM_DELIVERY_MODE || 'test') === 'test'
+    )
+  ];
+}
+
 const URL_ENV_KEYS = [
   'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SITE_URL',
@@ -303,7 +397,8 @@ function summarize(results) {
 async function validateDeploymentEnv(root, options = {}) {
   const envFiles = options.envFile ? [options.envFile] : options.envFiles || DEFAULT_ENV_FILES;
   const env = await loadEnv(root, envFiles);
-  const results = REQUIREMENTS.map((requirement) => classifyRequirement(requirement, env.values));
+  const results = deploymentRequirements(env.values)
+    .map((requirement) => classifyRequirement(requirement, env.values));
   const summary = summarize(results);
   const urlDiscovery = await discoverStorefrontUrls(root, env.values);
 
@@ -399,12 +494,15 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
 }
 
 export {
+  DELIVERY_GATEWAY_REQUIREMENTS,
   REQUIREMENTS,
   classifyRequirement,
   classifyUrl,
   discoverStorefrontUrls,
+  deploymentRequirements,
   parseArgs,
   parseDotenv,
   summarize,
+  usesSelfHostedDeliveryGateway,
   validateDeploymentEnv
 };
