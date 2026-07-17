@@ -399,5 +399,6 @@ npm run stop:local
 - GTM 컨테이너 버전 2 `Marketing automation v1 - GA4 Ads Meta`를 게시했습니다. 게시 버전은 태그 12개, 맞춤 이벤트 트리거 7개, 사용자 정의 변수 14개를 포함합니다.
 - 운영 도메인 Tag Assistant에서 `view_item`, `add_to_cart`, `begin_checkout`, `generate_lead`, `purchase`를 실행했고 GA4 이벤트 태그, Google Ads 구매 전환, Meta `AddToCart`/`InitiateCheckout`/`Purchase`가 각각 1회 발화하는 것을 확인했습니다. `purchase` 중복 주문번호 차단과 dataLayer PII 미포함도 확인했습니다.
 - GTM import 정적 검증은 85/85, 전체 테스트는 116/116, 정적 검사는 통과했습니다. Vercel production 검증은 8/8 통과했습니다.
-- 현재 Vercel readiness API에는 `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`이 미반영으로 표시됩니다. 앞의 두 공개값은 확보됐지만 Vercel 계정의 2FA 권고 화면을 처리한 뒤 production env와 재배포에 반영해야 합니다.
+- Vercel의 기존 Google Ads 전환 ID를 교정하고 `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`를 Production/Preview 환경에 추가했습니다. 커밋 `93188e5` 기준 production 재배포가 `Ready` 상태이고 운영 도메인에 연결됐습니다.
+- 재배포 후 readiness API에서 GTM, GA4, Google Ads, Meta 항목은 모두 `ready`입니다. Production 검증도 다시 8/8 통과했고 missing 항목은 `DOWNSTREAM_CRM_WEBHOOK_URL` 하나입니다.
 - 실제 외부 입력이 필요한 최종 차단값은 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.

@@ -27,14 +27,10 @@
 - Meta: 자사몰 전용 데이터 세트/Pixel을 생성함
 - GTM: 버전 2 `Marketing automation v1 - GA4 Ads Meta`를 게시함
 - Tag Assistant: 운영 도메인에서 GA4 퍼널 이벤트, Google Ads 구매 전환, Meta 퍼널 이벤트의 발화를 확인함
-- Vercel public runtime config: GTM/GA4/App URL 반영됨. Google Ads/Meta 값은 이 문서의 반영 단계에서 추가함
-- Production QA: Vercel verifier 8/8 통과, demo dataLayer에 PII 없음
+- Vercel public runtime config: GTM/GA4/App URL과 Google Ads/Meta 값을 Production/Preview에 반영하고 production 재배포를 완료함
+- Production QA: 재배포 후 Vercel verifier 8/8 통과, demo dataLayer에 PII 없음
 
 ## 남은 차단값
-
-- `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
-  - 값은 확보됐고 production env 반영과 재배포만 남았습니다.
-  - 현재 Vercel readiness API에는 두 키가 아직 missing으로 표시됩니다.
 
 - `DOWNSTREAM_CRM_WEBHOOK_URL`
   - 실제 이메일/카카오/CRM 발송툴의 HTTPS webhook endpoint가 필요합니다.
