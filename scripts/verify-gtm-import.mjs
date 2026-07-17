@@ -124,6 +124,17 @@ function validateGtmImport(containerImport, blueprint) {
     checks.push(check(variables.some((variable) => variable.name === variableName), `constant_${variableName}`, `Constant variable exists: ${variableName}`));
   }
 
+  const adsConversionIdVariable = variables.find((variable) => variable.name === 'Google Ads Conversion ID');
+  const adsConversionId = paramValue(adsConversionIdVariable?.parameter, 'value');
+  checks.push(check(
+    /^(?:\d+|X+)$/.test(adsConversionId || ''),
+    'google_ads_conversion_id_format',
+    'Google Ads Conversion ID is numeric without an AW- prefix',
+    {
+      actual: adsConversionId || null
+    }
+  ));
+
   const ga4Config = tags.find((tag) => tag.name === 'GA4 - Config');
   checks.push(check(Boolean(ga4Config), 'ga4_config_tag', 'GA4 config tag exists'));
   checks.push(check(arrayIncludesAll(consentTypes(ga4Config || {}), ['analytics_storage']), 'ga4_config_consent', 'GA4 config requires analytics_storage'));
@@ -131,10 +142,19 @@ function validateGtmImport(containerImport, blueprint) {
   for (const tagConfig of blueprint.tags.filter((tag) => tag.type === 'GA4 Event')) {
     const tag = tags.find((candidate) => candidate.name === tagConfig.name);
     const trigger = triggerByEvent.get(tagConfig.event_name);
+    const measurementIdOverride = paramValue(tag?.parameter, 'measurementIdOverride');
     const configuredEventName = paramValue(tag?.parameter, 'eventName');
     const configuredParameters = eventParameters(tag || {}).map((entry) => entry.name);
 
     checks.push(check(Boolean(tag), `ga4_tag_${tagConfig.event_name}`, `GA4 event tag exists for ${tagConfig.event_name}`));
+    checks.push(check(
+      measurementIdOverride === '{{GA4 Measurement ID}}',
+      `ga4_measurement_id_${tagConfig.event_name}`,
+      `GA4 event tag uses the GA4 Measurement ID override for ${tagConfig.event_name}`,
+      {
+        actual: measurementIdOverride || null
+      }
+    ));
     checks.push(check(configuredEventName === tagConfig.event_name, `ga4_event_name_${tagConfig.event_name}`, `GA4 event tag sends ${tagConfig.event_name}`, {
       actual: configuredEventName || null
     }));

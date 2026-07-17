@@ -36,6 +36,31 @@ test('fails when Google Ads purchase conversion is not tied to purchase trigger 
   assert.equal(failed.ok, false);
 });
 
+test('fails when a GA4 event tag omits the measurement ID override', () => {
+  const containerImport = buildContainerImport(blueprint);
+  const tag = containerImport.containerVersion.tag.find((candidate) => candidate.name === 'GA4 Event - view_item');
+  tag.parameter = tag.parameter.filter((parameter) => parameter.key !== 'measurementIdOverride');
+
+  const report = validateGtmImport(containerImport, blueprint);
+  const failed = report.checks.find((check) => check.id === 'ga4_measurement_id_view_item');
+
+  assert.equal(report.ok, false);
+  assert.equal(failed.ok, false);
+});
+
+test('fails when Google Ads conversion ID contains the AW- prefix', () => {
+  const containerImport = buildContainerImport(blueprint);
+  const variable = containerImport.containerVersion.variable.find((candidate) => candidate.name === 'Google Ads Conversion ID');
+  const value = variable.parameter.find((parameter) => parameter.key === 'value');
+  value.value = 'AW-123456789';
+
+  const report = validateGtmImport(containerImport, blueprint);
+  const failed = report.checks.find((check) => check.id === 'google_ads_conversion_id_format');
+
+  assert.equal(report.ok, false);
+  assert.equal(failed.ok, false);
+});
+
 test('fails when GTM import contains contact PII variable names', () => {
   const containerImport = buildContainerImport(blueprint);
   containerImport.containerVersion.variable.push({

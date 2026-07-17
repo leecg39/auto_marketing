@@ -11,8 +11,11 @@
 - GA4 web stream ID: `15202126894`
 - GA4 measurement ID: `G-FECEN229PE`
 - Google Ads account: `446-442-5600`
-- Google Ads conversion ID: `AW-4464425600`
-- Meta Events Manager account: `1326028795156580`
+- Google Ads conversion ID: `AW-18208475402`
+- Google Ads purchase conversion: `oliveyoung-shopee PURCHASE`
+- Google Ads purchase label: `asZXCKCU59EcEIqSvepD`
+- Meta business portfolio: `1457163425257030`
+- Meta dataset/Pixel: `oliveyoung-shopee-web` / `1500227578454192`
 - Candidate env file: `examples/oliveyoung-shopee.production.env.example`
 
 ## 준비 완료
@@ -20,19 +23,19 @@
 - 운영 도메인: `https://auto-marketing-sigma.vercel.app`에서 접근 가능
 - GTM 설치 감지: GTM 설치 테스트에서 Google 태그 감지됨
 - GA4 스트림: 운영 URL 기준 웹 스트림과 측정 ID 확보됨
-- Vercel public runtime config: GTM/GA4/App URL/Google Ads conversion ID 반영됨
+- Google Ads: 자사몰 전용 구매 전환을 동적 값, 모든 전환 집계, 주요 액션으로 생성함
+- Meta: 자사몰 전용 데이터 세트/Pixel을 생성함
+- GTM: 버전 2 `Marketing automation v1 - GA4 Ads Meta`를 게시함
+- Tag Assistant: 운영 도메인에서 GA4 퍼널 이벤트, Google Ads 구매 전환, Meta 퍼널 이벤트의 발화를 확인함
+- Vercel public runtime config: GTM/GA4/App URL 반영됨. Google Ads/Meta 값은 이 문서의 반영 단계에서 추가함
 - Production QA: Vercel verifier 8/8 통과, demo dataLayer에 PII 없음
 
 ## 남은 차단값
 
-- `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`
-  - Google Ads 계정 `446-442-5600`에서 구매 전환 액션을 생성하거나 기존 구매 전환을 선택해야 합니다.
-  - 현재 전환 관리 URL은 스마트 캠페인 온보딩으로 리다이렉트되어 기존 label을 읽지 못했습니다.
-  - 생성/저장은 광고 계정 설정 변경이므로 Computer Use action-time 확인 후 진행합니다.
-- `NEXT_PUBLIC_META_PIXEL_ID`
-  - Meta Events Manager 계정 `1326028795156580`의 데이터 세트 화면이 `데이터 소스 없음` 상태입니다.
-  - 새 데이터 세트/Pixel 생성이 필요합니다.
-  - 생성/저장은 Meta 계정 상태 변경이므로 Computer Use action-time 확인 후 진행합니다.
+- `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`
+  - 값은 확보됐고 production env 반영과 재배포만 남았습니다.
+  - 현재 Vercel readiness API에는 두 키가 아직 missing으로 표시됩니다.
+
 - `DOWNSTREAM_CRM_WEBHOOK_URL`
   - 실제 이메일/카카오/CRM 발송툴의 HTTPS webhook endpoint가 필요합니다.
   - API key가 필요한 provider라면 `DOWNSTREAM_CRM_API_KEY`도 private env에만 넣습니다.
@@ -44,8 +47,6 @@
 cp examples/oliveyoung-shopee.production.env.example /path/to/marketing-production.env
 # Fill:
 # DOWNSTREAM_CRM_WEBHOOK_URL
-# NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL
-# NEXT_PUBLIC_META_PIXEL_ID
 # Optional: DOWNSTREAM_CRM_API_KEY
 
 npm run validate:env -- . --env-file /path/to/marketing-production.env

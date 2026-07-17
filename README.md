@@ -133,7 +133,7 @@ handoff 문서는 `dist/deployment-handoff.md`, 기계 판독용 JSON은 `dist/d
 
 이미 Vercel 프로젝트 URL이 있다면 `--vercel-project-url`을 함께 넘깁니다. 점검기는 URL에서 scope/project를 파싱하고, 현재 Vercel CLI 계정으로 해당 scope와 프로젝트를 조회할 수 있는지 별도 blocker로 기록합니다.
 
-운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. 일반 자사몰에는 `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 현재 `auto-marketing-sigma.vercel.app` 배포는 `examples/oliveyoung-shopee.production.env.example`에 GTM/GA4/Vercel 공개값이 채워져 있으므로, 남은 Google Ads purchase label, Meta Pixel ID, CRM downstream webhook만 채우면 됩니다. 출력에는 값이 마스킹됩니다.
+운영값을 별도 env 파일로 받은 뒤 실제 사이트 `.env.local`에 병합할 때는 먼저 dry-run을 실행합니다. 일반 자사몰에는 `examples/marketing-production.env.example`을 복사해 placeholder를 실제 값으로 바꾼 파일을 사용합니다. 현재 `auto-marketing-sigma.vercel.app` 배포용 `examples/oliveyoung-shopee.production.env.example`에는 GTM, GA4, Google Ads, Meta 공개값이 채워져 있으므로, 남은 실제 CRM downstream webhook만 채우면 됩니다. 출력에는 값이 마스킹됩니다.
 
 ```bash
 cd marketing-automation-kit

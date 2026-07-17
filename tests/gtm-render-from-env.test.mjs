@@ -49,7 +49,7 @@ test('renders GTM public ID and constant variables from env values', () => {
 
   assert.equal(rendered.containerVersion.container.publicId, 'GTM-ABC1234');
   assert.equal(constants['GA4 Measurement ID'], 'G-ABCD123456');
-  assert.equal(constants['Google Ads Conversion ID'], 'AW-123456789');
+  assert.equal(constants['Google Ads Conversion ID'], '123456789');
   assert.equal(constants['Google Ads Purchase Label'], 'Purchase_Label_123');
   assert.equal(constants['Meta Pixel ID'], '1234567890');
   assert.equal(changed.public_id, 'GTM***234');
@@ -109,6 +109,34 @@ test('writes production GTM import when env values are ready', async () => {
     assert.equal(rendered.containerVersion.container.publicId, 'GTM-ABC1234');
     assert.equal(constants['Meta Pixel ID'], '1234567890');
     assert.equal(report.changed.constants['Meta Pixel ID'].masked_value, '123***890');
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('renders GTM import when only the downstream CRM webhook is missing', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-gtm-render-'));
+  const siteRoot = path.join(tmp, 'store');
+  const envFile = path.join(tmp, 'marketing.env');
+  const input = path.join(tmp, 'gtm.json');
+  const output = path.join(tmp, 'rendered.json');
+
+  try {
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(siteRoot));
+    await writeFile(envFile, validEnvText().replace('DOWNSTREAM_CRM_WEBHOOK_URL=https://crm.example.test/events\n', ''));
+    await writeFile(input, JSON.stringify(buildContainerImport(blueprint)));
+
+    const report = await renderGtmImportFromEnv({
+      siteRoot,
+      envFile,
+      input,
+      output
+    });
+
+    assert.equal(report.ok, true);
+    assert.deepEqual(report.source_status.missing, []);
+    assert.equal(report.source_status.checks.some((check) => check.key === 'DOWNSTREAM_CRM_WEBHOOK_URL'), false);
+    await readFile(output, 'utf8');
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

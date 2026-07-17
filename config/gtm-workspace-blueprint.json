@@ -3,7 +3,7 @@
   "container_type": "web",
   "required_ids": {
     "ga4_measurement_id": "G-XXXXXXXXXX",
-    "google_ads_conversion_id": "AW-XXXXXXXXX",
+    "google_ads_conversion_id": "XXXXXXXXX",
     "google_ads_purchase_label": "replace-with-purchase-label",
     "meta_pixel_id": "replace-with-meta-pixel-id"
   },

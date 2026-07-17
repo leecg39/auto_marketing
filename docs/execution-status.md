@@ -387,3 +387,17 @@ npm run stop:local
 - 운영 도메인: Vercel production alias `https://auto-marketing-sigma.vercel.app`를 현재 실행 표면으로 사용 중입니다. 별도 상용 자사몰 도메인을 붙이면 `NEXT_PUBLIC_APP_URL`과 GA4/광고 landing page 기준 URL을 다시 갱신해야 합니다.
 
 외부 계정 리소스 생성, 전환 액션 생성, 픽셀 생성, GTM 게시, 광고 설정 진행은 실제 계정 상태를 바꾸므로 실행 직전 사용자 확인과 운영 도메인이 필요합니다.
+
+## 2026-07-17 외부 계정 진행 상태
+
+- Google Ads 계정 `446-442-5600`을 생성하고 약관 동의를 완료했습니다. 광고 캠페인이나 지출은 생성하지 않았습니다.
+- 기존 `PURCHASE`는 `soverin.cloud`에 귀속된 이벤트여서 재사용하지 않았습니다.
+- 자사몰 전용 `oliveyoung-shopee PURCHASE`를 생성했습니다. 전환 ID는 `AW-18208475402`, 라벨은 `asZXCKCU59EcEIqSvepD`입니다.
+- 구매 전환은 전환별 동적 값, `매회` 집계, 주요 액션으로 설정했고 향상된 전환은 비활성화했습니다.
+- Meta 비즈니스 포트폴리오 `1457163425257030`에 데이터 세트/Pixel `oliveyoung-shopee-web`을 생성했습니다. Pixel ID는 `1500227578454192`입니다.
+- 이전에 추정한 `AW-4464425600`은 Google Ads 고객 계정 번호를 전환 ID로 잘못 사용한 값으로, 운영 구성에서 `AW-18208475402`로 교정합니다.
+- GTM 컨테이너 버전 2 `Marketing automation v1 - GA4 Ads Meta`를 게시했습니다. 게시 버전은 태그 12개, 맞춤 이벤트 트리거 7개, 사용자 정의 변수 14개를 포함합니다.
+- 운영 도메인 Tag Assistant에서 `view_item`, `add_to_cart`, `begin_checkout`, `generate_lead`, `purchase`를 실행했고 GA4 이벤트 태그, Google Ads 구매 전환, Meta `AddToCart`/`InitiateCheckout`/`Purchase`가 각각 1회 발화하는 것을 확인했습니다. `purchase` 중복 주문번호 차단과 dataLayer PII 미포함도 확인했습니다.
+- GTM import 정적 검증은 85/85, 전체 테스트는 116/116, 정적 검사는 통과했습니다. Vercel production 검증은 8/8 통과했습니다.
+- 현재 Vercel readiness API에는 `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`, `DOWNSTREAM_CRM_WEBHOOK_URL`이 미반영으로 표시됩니다. 앞의 두 공개값은 확보됐지만 Vercel 계정의 2FA 권고 화면을 처리한 뒤 production env와 재배포에 반영해야 합니다.
+- 실제 외부 입력이 필요한 최종 차단값은 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.

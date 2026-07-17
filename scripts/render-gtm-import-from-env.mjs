@@ -19,6 +19,10 @@ const CONSTANT_ENV_MAP = {
   'Google Ads Purchase Label': 'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL',
   'Meta Pixel ID': 'NEXT_PUBLIC_META_PIXEL_ID'
 };
+const GTM_ENV_KEYS = new Set([
+  'NEXT_PUBLIC_GTM_ID',
+  ...Object.values(CONSTANT_ENV_MAP)
+]);
 
 async function readJson(file) {
   return JSON.parse(await readFile(file, 'utf8'));
@@ -55,6 +59,29 @@ function setTemplateParameter(parameters, key, value) {
   }
 }
 
+function gtmConstantValue(variableName, value) {
+  if (variableName === 'Google Ads Conversion ID') {
+    return value.replace(/^AW-/i, '');
+  }
+
+  return value;
+}
+
+function selectGtmSourceStatus(sourceStatus) {
+  const select = (keys = []) => keys.filter((key) => GTM_ENV_KEYS.has(key));
+  const missing = select(sourceStatus.missing);
+  const placeholders = select(sourceStatus.placeholders);
+  const invalid = select(sourceStatus.invalid);
+
+  return {
+    ready: missing.length === 0 && placeholders.length === 0 && invalid.length === 0,
+    missing,
+    placeholders,
+    invalid,
+    checks: (sourceStatus.checks || []).filter((check) => GTM_ENV_KEYS.has(check.key))
+  };
+}
+
 function renderGtmImport(containerImport, values, options = {}) {
   const rendered = JSON.parse(JSON.stringify(containerImport));
   const version = rendered.containerVersion;
@@ -71,7 +98,7 @@ function renderGtmImport(containerImport, values, options = {}) {
       continue;
     }
 
-    setTemplateParameter(variable.parameter, 'value', values[envKey]);
+    setTemplateParameter(variable.parameter, 'value', gtmConstantValue(variable.name, values[envKey]));
     changedConstants[variable.name] = {
       env_key: envKey,
       masked_value: maskValue(values[envKey])
@@ -95,7 +122,7 @@ async function renderGtmImportFromEnv(options) {
   const output = path.resolve(options.output || DEFAULT_OUTPUT);
   const blueprintFile = path.resolve(options.blueprint || DEFAULT_BLUEPRINT);
   const env = await loadSiteEnv(siteRoot, options.envFile);
-  const sourceStatus = classifySourceValues(env.values);
+  const sourceStatus = selectGtmSourceStatus(classifySourceValues(env.values));
 
   if (!sourceStatus.ready) {
     return {
@@ -107,7 +134,7 @@ async function renderGtmImportFromEnv(options) {
       loaded_env_files: env.loaded_env_files,
       source_status: sourceStatus,
       changed: null,
-      next_step: '운영 env 값의 missing/placeholders/invalid 항목을 채운 뒤 render:gtm을 다시 실행하세요.'
+      next_step: 'GTM 렌더링에 필요한 공개 env 값의 missing/placeholders/invalid 항목을 채운 뒤 render:gtm을 다시 실행하세요.'
     };
   }
 
@@ -132,6 +159,7 @@ async function renderGtmImportFromEnv(options) {
     input,
     output,
     loaded_env_files: env.loaded_env_files,
+    source_status: sourceStatus,
     changed,
     verification: {
       ok: verification.ok,

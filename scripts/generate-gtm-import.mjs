@@ -129,7 +129,7 @@ function ga4EventTag(id, name, eventName, triggerId, parameterNames, consentType
     name,
     type: 'gaawe',
     parameter: [
-      template('measurementId', '{{GA4 Measurement ID}}'),
+      template('measurementIdOverride', '{{GA4 Measurement ID}}'),
       template('eventName', eventName),
       listParam('eventParameters', eventParameters)
     ],
