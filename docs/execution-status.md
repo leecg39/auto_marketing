@@ -426,3 +426,16 @@ npm run stop:local
 - 커밋 `e9c259d`를 GitHub `main`에 푸시했고 Vercel production에 반영했습니다.
 - 배포 후 Vercel production QA 9/9가 통과했습니다. 운영 브라우저에서 GTM 로드와 GA4 필수 7개 이벤트, CRM 플로우 6개, 자동화 액션 10개를 확인했습니다.
 - 완료 감사 결과는 8개 요구사항 중 7개 `complete`, 1개 `blocked_external`, `missing_evidence`와 `failed`는 0개입니다. 유일한 외부 입력은 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.
+
+## 2026-07-18 발송 게이트웨이 운영 연결
+
+- Vercel 내부 CRM downstream을 `/api/crm/downstream`에 배포하고 Resend, Upstash Redis, SOLAPI 공급자 어댑터를 구현했습니다.
+- Upstash Redis Free 데이터베이스 `auto-marketing-delivery`를 연결했고 Marketplace가 생성한 `UPSTASH_REDIS_KV_REST_API_URL/TOKEN` 쌍을 canonical Redis env의 alias로 인식합니다.
+- Resend 발송 전용 API 키를 생성해 Vercel Production/Preview에 저장했고, 현재는 `CRM_DELIVERY_MODE=test`와 정확한 수신자 allowlist를 사용합니다.
+- 연락처가 있는 `/api/crm/events` 요청은 서버용 Bearer 인증을 요구하며, 공개 브라우저 데모는 연락처 없이 자동화 계약만 검증합니다.
+- 비허용 수신자는 `test_recipient_not_allowed`로 억제되고, 허용된 테스트 이메일은 Resend에서 `delivered` 상태를 확인했습니다. 동일 payload 재전송은 Upstash에서 `duplicate_delivery`로 차단됐습니다.
+- Redis URL/토큰은 같은 namespace의 완전한 쌍만 선택하고, 테스트 allowlist는 실제 이메일/전화번호만 비교하도록 보강했습니다. 보안 재감사는 HIGH 이상 추가 문제 없이 통과했습니다.
+- 커밋 `a75ed1c`, `a85ca81`, `609191b`를 GitHub `main`에 푸시했고 Vercel production 배포가 `Ready` 상태입니다.
+- 전체 테스트 143/143, 정적 검사, 전체 로컬 QA 7/7, Vercel production QA 9/9가 통과했습니다.
+- 최신 완료 감사 결과는 8개 요구사항 중 7개 `complete`, 1개 `blocked_external`, `missing_evidence`와 `failed`는 0개입니다.
+- 운영 readiness에서 이메일 공급자와 scheduler는 준비 완료이며, 유일한 남은 입력은 `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_KAKAO_PF_ID`입니다.
