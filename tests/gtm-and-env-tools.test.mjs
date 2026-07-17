@@ -56,6 +56,22 @@ test('GTM purchase and ads tags require the expected consent types', () => {
   );
 });
 
+test('Meta Pixel tags disable automatic event detection before initialization', () => {
+  const containerImport = buildContainerImport(blueprint);
+  const metaTags = containerImport.containerVersion.tag.filter((tag) => tag.name.startsWith('Meta Pixel - '));
+
+  assert.equal(metaTags.length, 3);
+
+  for (const tag of metaTags) {
+    const html = tag.parameter.find((parameter) => parameter.key === 'html').value;
+    const autoConfigIndex = html.indexOf("fbq('set', 'autoConfig', false, '{{Meta Pixel ID}}')");
+    const initIndex = html.indexOf("fbq('init', '{{Meta Pixel ID}}')");
+
+    assert.notEqual(autoConfigIndex, -1);
+    assert.equal(autoConfigIndex < initIndex, true);
+  }
+});
+
 test('parses dotenv values without quotes', () => {
   assert.deepEqual(parseDotenv('A=1\nB="two"\nC=\'three\'\n# ignored\n'), {
     A: '1',

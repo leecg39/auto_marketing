@@ -406,9 +406,12 @@ npm run stop:local
 ### 2026-07-17 추가 검증
 
 - Meta 데이터 세트 `oliveyoung-shopee-web`(`1500227578454192`)을 광고 계정 `oliveyoung-shopee`(`1026946413533071`)과 연결했습니다.
-- GTM Preview에서는 Meta `AddToCart`, `InitiateCheckout`, `Purchase` 태그가 발화하지만, Meta가 내려주는 Pixel 설정의 `restrictedEventNames`에 세 이벤트가 포함되어 실제 `facebook.com/tr` 요청은 억제됩니다.
-- Events Manager에서 데이터 세트가 `개인적인 어려움` 민감 카테고리로 잘못 분류된 것을 확인했습니다. 이벤트 차단 검토의 `확인했습니다` 버튼은 Meta 비즈니스 도구 약관 준수 동의이므로 사용자 승인 전 상태로 대기 중입니다.
+- Meta 데이터 세트의 잘못된 `개인적인 어려움` 분류를 제거해 현재 카테고리는 `없음`입니다. Pixel 런타임 설정의 `unverifiedEventNames`와 `restrictedEventNames`도 모두 빈 배열입니다.
+- GTM 공개 컨테이너가 비어 있던 상태를 확인한 뒤 전체 태그를 다시 게시했습니다. 최종 운영 버전은 버전 5 `Marketing automation v4 - single Meta tag blocks`이며 태그 12개, 트리거 7개, 변수 19개를 포함합니다.
+- Meta 맞춤 HTML에 `autoConfig=false`를 초기화 전에 적용하고 누적된 스크립트 블록을 이벤트별 단일 블록으로 교체했습니다. 공개 `gtm.js` 컴파일 결과는 `AddToCart`, `InitiateCheckout`, `Purchase`, `fbevents.js`가 각각 한 번씩만 포함됩니다.
+- 운영 브라우저의 단일 퍼널 실행에서 dataLayer는 `view_item`, `add_to_cart`, `begin_checkout`, `purchase`를 각각 1회 기록했습니다. 같은 세션에서 GA4 수집 요청 4건, Google Ads 요청 2건, Meta 요청 `AddToCart`/`InitiateCheckout`/`Purchase` 각 1건을 확인했습니다.
+- Meta 이벤트 테스트 화면에서도 2026-07-17 21:12:03~21:12:05에 장바구니, 결제 시작, 구매 이벤트가 각각 1회 처리됐습니다. 자동 기록 이벤트와 표준 이벤트 중복은 더 이상 발생하지 않습니다.
 - CRM 수명주기 이벤트 `dormant_60_days`, `dormant_90_days`, `vip_qualified`와 휴면 복귀/VIP 혜택 액션을 구현했습니다. 휴면/VIP 이벤트는 `user_id`를 필수로 요구하고, `marketing_consent`는 JSON 불리언 `true`만 동의로 인정합니다.
 - 커밋 `52b6070`을 GitHub `main`에 푸시했고 Vercel production에 반영했습니다.
-- 전체 테스트 120/120, 정적 검사, 전체 로컬 QA 8/8, Vercel production 검증 9/9가 통과했습니다. 운영 API에서 수명주기 이벤트 3종과 액션 생성, 메시지 억제 상태를 확인했습니다.
+- 전체 테스트 122/122, 정적 검사, GTM import 검증 88/88, 전체 로컬 QA 8/8, Vercel production 검증 9/9가 통과했습니다. 운영 API에서 수명주기 이벤트 3종과 액션 생성, 메시지 억제 상태를 확인했습니다.
 - 운영 readiness의 유일한 누락값은 실제 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.

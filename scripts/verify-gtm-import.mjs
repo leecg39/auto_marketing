@@ -234,6 +234,12 @@ function validateGtmImport(containerImport, blueprint) {
       `${expectation.name} initializes pixel and tracks ${expectation.fbqEvent}`
     ));
     checks.push(check(
+      html.indexOf("fbq('set', 'autoConfig', false, '{{Meta Pixel ID}}')") >= 0 &&
+        html.indexOf("fbq('set', 'autoConfig', false, '{{Meta Pixel ID}}')") < html.indexOf("fbq('init', '{{Meta Pixel ID}}')"),
+      `meta_auto_config_${expectation.fbqEvent}`,
+      `${expectation.name} disables automatic event detection before pixel initialization`
+    ));
+    checks.push(check(
       arrayIncludesAll(consentTypes(tag || {}), ['ad_storage', 'ad_personalization']),
       `meta_consent_${expectation.fbqEvent}`,
       `${expectation.name} requires ad consent`

@@ -61,6 +61,19 @@ test('fails when Google Ads conversion ID contains the AW- prefix', () => {
   assert.equal(failed.ok, false);
 });
 
+test('fails when a Meta Pixel tag leaves automatic event detection enabled', () => {
+  const containerImport = buildContainerImport(blueprint);
+  const tag = containerImport.containerVersion.tag.find((candidate) => candidate.name === 'Meta Pixel - Purchase');
+  const html = tag.parameter.find((parameter) => parameter.key === 'html');
+  html.value = html.value.replace("    fbq('set', 'autoConfig', false, '{{Meta Pixel ID}}');\n", '');
+
+  const report = validateGtmImport(containerImport, blueprint);
+  const failed = report.checks.find((check) => check.id === 'meta_auto_config_Purchase');
+
+  assert.equal(report.ok, false);
+  assert.equal(failed.ok, false);
+});
+
 test('fails when GTM import contains contact PII variable names', () => {
   const containerImport = buildContainerImport(blueprint);
   containerImport.containerVersion.variable.push({

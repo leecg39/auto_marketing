@@ -16,6 +16,7 @@
 - Google Ads purchase label: `asZXCKCU59EcEIqSvepD`
 - Meta business portfolio: `1457163425257030`
 - Meta dataset/Pixel: `oliveyoung-shopee-web` / `1500227578454192`
+- Meta ad account: `oliveyoung-shopee` / `1026946413533071`
 - Candidate env file: `examples/oliveyoung-shopee.production.env.example`
 
 ## 준비 완료
@@ -24,11 +25,12 @@
 - GTM 설치 감지: GTM 설치 테스트에서 Google 태그 감지됨
 - GA4 스트림: 운영 URL 기준 웹 스트림과 측정 ID 확보됨
 - Google Ads: 자사몰 전용 구매 전환을 동적 값, 모든 전환 집계, 주요 액션으로 생성함
-- Meta: 자사몰 전용 데이터 세트/Pixel을 생성함
-- GTM: 버전 2 `Marketing automation v1 - GA4 Ads Meta`를 게시함
-- Tag Assistant: 운영 도메인에서 GA4 퍼널 이벤트, Google Ads 구매 전환, Meta 퍼널 이벤트의 발화를 확인함
+- Meta: 자사몰 전용 데이터 세트/Pixel을 생성하고 광고 계정에 연결함. 데이터 세트 카테고리는 `없음`이고 이벤트 제한 배열은 비어 있음
+- GTM: 버전 5 `Marketing automation v4 - single Meta tag blocks`를 게시함. Meta 자동 이벤트를 끄고 이벤트별 맞춤 HTML을 단일 블록으로 유지함
+- 운영 검증: GA4 퍼널 수집, Google Ads 구매 요청, Meta `AddToCart`/`InitiateCheckout`/`Purchase`가 각각 1회 전송됨
+- Meta 이벤트 테스트: 2026-07-17 21:12:03~21:12:05에 장바구니, 결제 시작, 구매가 각각 1회 처리됨
 - Vercel public runtime config: GTM/GA4/App URL과 Google Ads/Meta 값을 Production/Preview에 반영하고 production 재배포를 완료함
-- Production QA: 재배포 후 Vercel verifier 8/8 통과, demo dataLayer에 PII 없음
+- Production QA: Vercel verifier 9/9 통과, demo dataLayer에 PII 없음
 
 ## 남은 차단값
 
