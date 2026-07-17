@@ -133,6 +133,40 @@ test('Vercel CRM event API rejects contact payloads without marketing consent', 
   assert.equal(result.body.errors.includes('marketing_consent_required_for_contact_payload'), true);
 });
 
+test('Vercel CRM event API only accepts literal true as marketing consent', async () => {
+  const result = await invoke(crmHandler, 'POST', {
+    event_name: 'generate_lead',
+    occurred_at: '2026-07-05T00:00:00.000Z',
+    email: 'demo@example.test',
+    marketing_consent: 'false'
+  });
+
+  assert.equal(result.status, 422);
+  assert.equal(result.body.errors.includes('marketing_consent_required_for_contact_payload'), true);
+});
+
+test('Vercel CRM event API validates and creates lifecycle actions', async () => {
+  const missingUser = await invoke(crmHandler, 'POST', {
+    event_name: 'dormant_60_days',
+    occurred_at: '2026-07-05T00:00:00.000Z',
+    marketing_consent: true
+  });
+  const accepted = await invoke(crmHandler, 'POST', {
+    event_name: 'vip_qualified',
+    occurred_at: '2026-07-05T00:00:00.000Z',
+    user_id: 'USER_VIP_001',
+    email: 'vip@example.test',
+    marketing_consent: true
+  });
+
+  assert.equal(missingUser.status, 422);
+  assert.equal(missingUser.body.errors.includes('user_id_required_for_lifecycle_event'), true);
+  assert.equal(accepted.status, 202);
+  assert.equal(accepted.body.automation_flow, 'vip_benefit');
+  assert.deepEqual(accepted.body.automation_actions.map((action) => action.flow), ['vip_benefit']);
+  assert.equal(accepted.body.automation_actions[0].status, 'ready');
+});
+
 test('Vercel env readiness API reports ready state without exposing raw values', async () => {
   const previous = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 

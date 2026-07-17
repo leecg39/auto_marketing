@@ -7,6 +7,7 @@ const DOWNSTREAM_CRM_API_KEY = process.env.DOWNSTREAM_CRM_API_KEY || '';
 const DOWNSTREAM_CRM_TIMEOUT_MS = Number(process.env.DOWNSTREAM_CRM_TIMEOUT_MS || 5000);
 
 const REQUIRED_FIELDS = ['event_name', 'occurred_at'];
+const LIFECYCLE_EVENTS = new Set(['dormant_60_days', 'dormant_90_days', 'vip_qualified']);
 
 function sendJson(response, status, payload) {
   response.writeHead(status, {
@@ -40,7 +41,7 @@ function pickAllowedFields(payload) {
     user_id: payload.user_id || '',
     email: payload.email || '',
     phone: payload.phone || '',
-    marketing_consent: Boolean(payload.marketing_consent),
+    marketing_consent: payload.marketing_consent === true,
     event_name: payload.event_name || '',
     product_id: payload.product_id || '',
     cart_id: payload.cart_id || '',
@@ -65,6 +66,10 @@ function validatePayload(payload) {
 
   if (payload.event_name && !FLOW_BY_EVENT[payload.event_name]) {
     errors.push('unsupported_event_name');
+  }
+
+  if (LIFECYCLE_EVENTS.has(payload.event_name) && !payload.user_id) {
+    errors.push('user_id_required_for_lifecycle_event');
   }
 
   if ((payload.email || payload.phone) && payload.marketing_consent !== true) {

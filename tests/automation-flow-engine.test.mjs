@@ -11,6 +11,9 @@ test('maps raw CRM events to the primary automation flow', () => {
   assert.equal(automationFlowForEvent('begin_checkout'), 'checkout_abandonment_candidate');
   assert.equal(automationFlowForEvent('purchase'), 'post_purchase_review_and_recommendation');
   assert.equal(automationFlowForEvent('generate_lead'), 'lead_followup');
+  assert.equal(automationFlowForEvent('dormant_60_days'), 'dormant_reactivation');
+  assert.equal(automationFlowForEvent('dormant_90_days'), 'dormant_reactivation');
+  assert.equal(automationFlowForEvent('vip_qualified'), 'vip_benefit');
 });
 
 test('schedules cart abandonment message and ads audience with purchase cancellation', () => {
@@ -86,4 +89,51 @@ test('schedules first purchase, review, repurchase, and purchase exclusion actio
   assert.equal(actions[1].scheduled_at, '2026-07-04T00:00:00.000Z');
   assert.equal(actions[2].scheduled_at, '2026-07-27T00:00:00.000Z');
   assert.equal(actions[3].action_type, 'audience');
+});
+
+test('creates distinct 60-day and 90-day dormant reactivation milestones', () => {
+  const sixtyDayActions = buildAutomationActions({
+    event_name: 'dormant_60_days',
+    user_id: 'USER_001',
+    email: 'buyer@example.test',
+    marketing_consent: true,
+    occurred_at: occurredAt
+  });
+  const ninetyDayActions = buildAutomationActions({
+    event_name: 'dormant_90_days',
+    user_id: 'USER_001',
+    phone: '01012345678',
+    marketing_consent: true,
+    occurred_at: occurredAt
+  });
+
+  assert.deepEqual(sixtyDayActions.map((action) => action.flow), [
+    'dormant_reactivation_60',
+    'dormant_retargeting_audience'
+  ]);
+  assert.equal(sixtyDayActions[0].lifecycle_milestone, 'dormant_60_days');
+  assert.equal(sixtyDayActions[1].exclude_on_event, 'purchase');
+  assert.equal(ninetyDayActions[0].flow, 'dormant_reactivation_90');
+  assert.equal(ninetyDayActions[0].lifecycle_milestone, 'dormant_90_days');
+});
+
+test('creates a consent-gated VIP benefit action', () => {
+  const ready = buildAutomationActions({
+    event_name: 'vip_qualified',
+    user_id: 'USER_002',
+    email: 'vip@example.test',
+    marketing_consent: true,
+    occurred_at: occurredAt
+  });
+  const suppressed = buildAutomationActions({
+    event_name: 'vip_qualified',
+    user_id: 'USER_003',
+    marketing_consent: false,
+    occurred_at: occurredAt
+  });
+
+  assert.equal(ready[0].flow, 'vip_benefit');
+  assert.equal(ready[0].status, 'ready');
+  assert.equal(suppressed[0].status, 'suppressed');
+  assert.equal(suppressed[0].suppress_reason, 'marketing_consent_required');
 });

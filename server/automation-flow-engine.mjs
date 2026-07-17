@@ -4,7 +4,10 @@ const FLOW_BY_EVENT = {
   begin_checkout: 'checkout_abandonment_candidate',
   purchase: 'post_purchase_review_and_recommendation',
   generate_lead: 'lead_followup',
-  login: 'customer_activity_refresh'
+  login: 'customer_activity_refresh',
+  dormant_60_days: 'dormant_reactivation',
+  dormant_90_days: 'dormant_reactivation',
+  vip_qualified: 'vip_benefit'
 };
 
 function addMinutes(iso, minutes) {
@@ -173,6 +176,40 @@ function buildAutomationActions(payload) {
           segment: 'active_customers',
           channels: ['ads'],
           scheduled_at: at
+        })
+      ];
+
+    case 'dormant_60_days':
+    case 'dormant_90_days': {
+      const days = payload.event_name === 'dormant_60_days' ? 60 : 90;
+
+      return [
+        messageAction(payload, {
+          flow: `dormant_reactivation_${days}`,
+          segment: 'dormant_60_90_days',
+          channels: ['email', 'kakao'],
+          scheduled_at: at,
+          lifecycle_milestone: payload.event_name
+        }),
+        audienceAction(payload, {
+          flow: 'dormant_retargeting_audience',
+          segment: 'dormant_60_90_days',
+          channels: ['ads'],
+          scheduled_at: at,
+          lifecycle_milestone: payload.event_name,
+          exclude_on_event: 'purchase'
+        })
+      ];
+    }
+
+    case 'vip_qualified':
+      return [
+        messageAction(payload, {
+          flow: 'vip_benefit',
+          segment: 'vip_customers',
+          channels: ['email', 'kakao'],
+          scheduled_at: at,
+          lifecycle_milestone: 'vip_qualified'
         })
       ];
 

@@ -40,11 +40,13 @@
     },
     {
       "name": "dormant_60_90_days",
-      "condition": "last_purchase_days >= 60",
+      "entry_events": ["dormant_60_days", "dormant_90_days"],
+      "condition": "CRM emits each lifecycle milestone once when last_purchase_days reaches 60 or 90",
       "channels": ["email", "kakao", "ads"]
     },
     {
       "name": "vip_customers",
+      "entry_event": "vip_qualified",
       "condition": "lifetime_value >= configured_vip_threshold",
       "channels": ["email", "kakao"]
     },
@@ -63,6 +65,7 @@
   "message_safety_rules": [
     "email or phone payloads require marketing_consent == true",
     "CRM platform must suppress sends when unsubscribe or opt-out exists",
-    "purchase retargeting audiences must exclude users with purchase after campaign entry"
+    "purchase retargeting audiences must exclude users with purchase after campaign entry",
+    "CRM lifecycle producer must emit dormant and VIP milestone events once per user and milestone"
   ]
 }

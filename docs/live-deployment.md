@@ -80,6 +80,10 @@ CRM 수신 서버는 이벤트별로 `automation_actions`를 함께 계산합니
 - `begin_checkout`: 30분 후 결제 이탈 메시지, 구매 시 취소, 광고 대상 업데이트
 - `purchase`: 7일 후 리뷰 요청, 30일 후 재구매 알림, 광고 제외 대상 업데이트
 - `generate_lead`: 즉시 리드 후속 메시지
+- `dormant_60_days`, `dormant_90_days`: 즉시 휴면 복귀 메시지, 구매 시 제외되는 광고 대상 업데이트
+- `vip_qualified`: 즉시 VIP 혜택 메시지
+
+휴면/VIP 이벤트에는 `user_id`가 필수입니다. CRM 고객 집계 작업은 사용자별 마일스톤을 한 번만 전송해야 하며, 실제 발송툴은 예약 실행, 구매 발생 시 취소, 수신거부, 빈도 제한, 중복 방지를 최종 집행합니다. `marketing_consent`는 JSON 불리언 `true`일 때만 동의로 처리됩니다.
 
 ## 운영 검증
 
@@ -156,4 +160,4 @@ npm run audit:completion -- --site-root /path/to/your-store --strict
 - `purchase`에는 실제 주문번호가 `transaction_id`로 들어가며 새로고침 중복이 없습니다.
 - GA4 이벤트에는 이메일, 전화번호, 이름, 주소가 없습니다.
 - CRM 이벤트는 마케팅 수신동의가 있을 때만 전송됩니다.
-- 장바구니/결제 이탈, 구매 후 리뷰, 재구매, 리드 후속 `automation_actions`가 발송툴에 연결되어 있습니다.
+- 장바구니/결제 이탈, 구매 후 리뷰, 재구매, 리드 후속, 60/90일 휴면 복귀, VIP 혜택 `automation_actions`가 발송툴에 연결되어 있습니다.

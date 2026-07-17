@@ -70,13 +70,39 @@ function baseFullQa({ envReady = false, renderReady = false } = {}) {
       passedStep('local_e2e', {
         summary: {
           crm_events: [
-            { automation_flow: 'cart_abandonment_candidate' },
-            { automation_flow: 'checkout_abandonment_candidate' },
-            { automation_flow: 'post_purchase_review_and_recommendation' },
-            { automation_flow: 'lead_followup' }
+            {
+              automation_flow: 'cart_abandonment_candidate',
+              automation_actions: ['cart_abandonment_reminder', 'cart_retargeting_audience']
+            },
+            {
+              automation_flow: 'checkout_abandonment_candidate',
+              automation_actions: ['checkout_abandonment_reminder', 'checkout_retargeting_audience']
+            },
+            {
+              automation_flow: 'post_purchase_review_and_recommendation',
+              automation_actions: ['review_request', 'repurchase_due', 'purchase_exclusion']
+            },
+            { automation_flow: 'lead_followup', automation_actions: ['lead_followup'] },
+            {
+              automation_flow: 'dormant_reactivation',
+              automation_actions: ['dormant_reactivation_60', 'dormant_retargeting_audience']
+            },
+            {
+              automation_flow: 'dormant_reactivation',
+              automation_actions: ['dormant_reactivation_90', 'dormant_retargeting_audience']
+            },
+            { automation_flow: 'vip_benefit', automation_actions: ['vip_benefit'] }
           ],
           downstream: {
-            event_names: ['add_to_cart', 'begin_checkout', 'purchase', 'generate_lead']
+            event_names: [
+              'add_to_cart',
+              'begin_checkout',
+              'purchase',
+              'generate_lead',
+              'dormant_60_days',
+              'dormant_90_days',
+              'vip_qualified'
+            ]
           }
         }
       }),

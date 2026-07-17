@@ -11,14 +11,20 @@ const EXPECTED_FLOWS = {
   add_to_cart: 'cart_abandonment_candidate',
   begin_checkout: 'checkout_abandonment_candidate',
   purchase: 'post_purchase_review_and_recommendation',
-  generate_lead: 'lead_followup'
+  generate_lead: 'lead_followup',
+  dormant_60_days: 'dormant_reactivation',
+  dormant_90_days: 'dormant_reactivation',
+  vip_qualified: 'vip_benefit'
 };
 
 const EXPECTED_ACTIONS = {
   add_to_cart: ['cart_abandonment_reminder', 'cart_retargeting_audience'],
   begin_checkout: ['checkout_abandonment_reminder', 'checkout_retargeting_audience'],
   purchase: ['review_request', 'repurchase_due', 'purchase_exclusion'],
-  generate_lead: ['lead_followup']
+  generate_lead: ['lead_followup'],
+  dormant_60_days: ['dormant_reactivation_60', 'dormant_retargeting_audience'],
+  dormant_90_days: ['dormant_reactivation_90', 'dormant_retargeting_audience'],
+  vip_qualified: ['vip_benefit']
 };
 
 function assert(condition, message) {
@@ -127,6 +133,7 @@ async function verifyCrmEvent(eventName, index) {
     occurred_at: new Date().toISOString(),
     marketing_consent: true,
     email: `qa-${eventName}@example.test`,
+    user_id: `USER-${index}`,
     phone: eventName === 'generate_lead' ? '01012345678' : undefined,
     product_id: eventName === 'add_to_cart' ? 'SKU_001' : undefined,
     cart_id: eventName === 'begin_checkout' ? `CART-${index}` : undefined,

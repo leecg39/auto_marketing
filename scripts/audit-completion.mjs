@@ -29,7 +29,11 @@ const REQUIRED_AUTOMATION_ACTIONS = [
   'review_request',
   'repurchase_due',
   'purchase_exclusion',
-  'lead_followup'
+  'lead_followup',
+  'dormant_reactivation_60',
+  'dormant_reactivation_90',
+  'dormant_retargeting_audience',
+  'vip_benefit'
 ];
 
 async function pathExists(file) {
@@ -86,8 +90,13 @@ function allSupportedEvents(siteAudit) {
   return REQUIRED_EVENTS.every((eventName) => supported[eventName] === true);
 }
 
-function hasAllAutomationActions(step) {
-  const actions = step?.json?.summary?.automation_action_flows || [];
+function hasAllAutomationActions(...steps) {
+  const actions = steps.flatMap((step) => {
+    const summary = step?.json?.summary || {};
+    const browserActions = summary.automation_action_flows || [];
+    const localActions = (summary.crm_events || []).flatMap((event) => event.automation_actions || []);
+    return [...browserActions, ...localActions];
+  });
   return REQUIRED_AUTOMATION_ACTIONS.every((action) => actions.includes(action));
 }
 
@@ -97,7 +106,9 @@ function hasExpectedLocalFlows(step) {
     'cart_abandonment_candidate',
     'checkout_abandonment_candidate',
     'post_purchase_review_and_recommendation',
-    'lead_followup'
+    'lead_followup',
+    'dormant_reactivation',
+    'vip_benefit'
   ].every((flow) => flows.includes(flow));
 }
 
@@ -206,7 +217,7 @@ function buildRequirements(fullQa, handoff, currentEnv) {
         stepPassed(fullQa, 'local_e2e') &&
           stepPassed(fullQa, 'browser_demo_e2e') &&
           hasExpectedLocalFlows(localE2e) &&
-          hasAllAutomationActions(browserDemo),
+          hasAllAutomationActions(localE2e, browserDemo),
         !fullQaExists || !localE2e || !browserDemo
       ),
       [

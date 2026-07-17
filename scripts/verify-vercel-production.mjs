@@ -423,6 +423,51 @@ async function verifyVercelProduction(options) {
     return { url, http_status: response.status, errors: json.errors };
   }));
 
+  checks.push(await runCheck('api_lifecycle_flows', async () => {
+    const url = joinUrl(options.baseUrl, '/api/crm/events');
+    const expected = {
+      dormant_60_days: ['dormant_reactivation_60', 'dormant_retargeting_audience'],
+      dormant_90_days: ['dormant_reactivation_90', 'dormant_retargeting_audience'],
+      vip_qualified: ['vip_benefit']
+    };
+    const results = [];
+
+    for (const [eventName, expectedActions] of Object.entries(expected)) {
+      const { response, json } = await fetchBody(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_name: eventName,
+          occurred_at: '2026-07-05T05:10:00.000Z',
+          user_id: `QA_${eventName.toUpperCase()}`,
+          marketing_consent: false,
+          metadata: { test_mode: true }
+        })
+      });
+
+      assert(response.status === 202, `${eventName} API returned ${response.status}`);
+      assert(json?.ok === true, `${eventName} API body is not ok`);
+      const actionFlows = json.automation_actions.map((action) => action.flow);
+      assert(
+        expectedActions.every((flow) => actionFlows.includes(flow)),
+        `${eventName} lifecycle action flows mismatch`
+      );
+      assert(
+        json.automation_actions.filter((action) => action.action_type === 'message')
+          .every((action) => action.status === 'suppressed'),
+        `${eventName} test message was not suppressed`
+      );
+
+      results.push({
+        event_name: eventName,
+        automation_flow: json.automation_flow,
+        action_flows: actionFlows
+      });
+    }
+
+    return { url, events: results };
+  }));
+
   if (options.browser) {
     checks.push(await runCheck('demo_browser_autorun', async () => {
       const url = demoUrl(options.baseUrl);

@@ -314,6 +314,14 @@ CRM 페이로드 계약:
 
 CRM 응답에는 기존 `automation_flow`와 함께 발송툴/광고 대상 동기화가 바로 사용할 수 있는 `automation_actions`가 포함됩니다.
 
+웹 이벤트 외에 CRM 고객 집계 작업은 아래 수명주기 이벤트를 같은 엔드포인트로 전송합니다. 이 이벤트들은 `user_id`가 필수이며, CRM은 사용자별 마일스톤을 한 번만 발행해야 합니다.
+
+- `dormant_60_days`: 60일 휴면 복귀 메시지와 광고 리타겟팅 대상 생성
+- `dormant_90_days`: 90일 휴면 복귀 메시지와 광고 리타겟팅 대상 갱신
+- `vip_qualified`: VIP 기준 최초 충족 시 혜택 메시지 생성
+
+`marketing_consent`는 JSON 불리언 `true`만 동의로 인정합니다. 예약 실행, 구매 발생 시 취소, 수신거부, 발송 빈도 제한, 마일스톤 중복 방지는 실제 발송툴 또는 CRM 워크플로가 최종 집행합니다.
+
 ```json
 {
   "automation_flow": "checkout_abandonment_candidate",
@@ -422,7 +430,7 @@ npm run verify:browser
 ```
 
 이 검증은 동의 허용, 상품 조회, 장바구니, 결제 시작, 구매 완료, 리드 생성, 구매 중복 방지, dataLayer 개인정보 제거, CRM 플로우 매핑을 브라우저 DOM에서 확인합니다.
-또한 장바구니/결제 이탈, 구매 후 리뷰, 재구매, 광고 제외, 리드 후속 `automation_actions`가 생성되는지도 확인합니다.
+또한 장바구니/결제 이탈, 구매 후 리뷰, 재구매, 광고 제외, 리드 후속, 60/90일 휴면 복귀, VIP 혜택 `automation_actions`가 생성되는지도 확인합니다.
 로컬 downstream 시뮬레이터가 실행 중이면 CRM payload가 실제 webhook으로 전달되어 `202`를 받는지도 확인합니다.
 
 실제 자사몰을 로컬에서 띄운 뒤에는 아래 명령으로 설치된 사이트 표면을 확인합니다.
