@@ -423,3 +423,6 @@ npm run stop:local
 - 로컬 브라우저 E2E에서 7개 dataLayer 이벤트, CRM 이벤트 6개, downstream `202` 6건, UTM 보존, 구매 중복 차단, dataLayer 개인정보 미포함을 확인했습니다.
 - 완료 감사는 로컬 env 파일이 없을 때 Vercel production QA의 `/api/marketing/env-status`와 브라우저 자동 실행 결과를 운영 증거로 사용합니다. 따라서 적용된 GTM/GA4/Ads/Meta ID를 누락으로 오판하지 않고 실제 미설정값만 보고합니다.
 - 정적 검사, 전체 테스트 123/123, 전체 로컬 QA 8/8가 통과했습니다.
+- 커밋 `e9c259d`를 GitHub `main`에 푸시했고 Vercel production에 반영했습니다.
+- 배포 후 Vercel production QA 9/9가 통과했습니다. 운영 브라우저에서 GTM 로드와 GA4 필수 7개 이벤트, CRM 플로우 6개, 자동화 액션 10개를 확인했습니다.
+- 완료 감사 결과는 8개 요구사항 중 7개 `complete`, 1개 `blocked_external`, `missing_evidence`와 `failed`는 0개입니다. 유일한 외부 입력은 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.
