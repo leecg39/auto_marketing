@@ -9,10 +9,10 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
-function runtimeValues(requirements) {
+function runtimeValues(requirements, source = process.env) {
   return Object.fromEntries(requirements.map((requirement) => [
     requirement.key,
-    process.env[requirement.key] || ''
+    source[requirement.key] || ''
   ]));
 }
 
@@ -148,9 +148,11 @@ async function handler(request, response) {
     REQUIREMENTS,
     classifyRequirement,
     deploymentRequirements,
+    normalizeDeploymentEnvValues,
     summarize
   } = await loadEnvValidator();
-  const values = runtimeValues([...REQUIREMENTS, ...DELIVERY_GATEWAY_REQUIREMENTS]);
+  const requirements = [...REQUIREMENTS, ...DELIVERY_GATEWAY_REQUIREMENTS];
+  const values = runtimeValues(requirements, normalizeDeploymentEnvValues(process.env));
   const checks = deploymentRequirements(values).map((requirement) => ({
     ...classifyRequirement(requirement, values),
     has_value: Boolean(values[requirement.key])

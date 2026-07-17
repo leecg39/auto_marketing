@@ -107,18 +107,25 @@ function parseTestRecipients(value) {
     .filter(Boolean));
 }
 
+function channelRecipient(payload, channel) {
+  if (channel === 'email') {
+    return normalizeRecipient(payload.email);
+  }
+  if (channel === 'kakao') {
+    return normalizeRecipient(payload.phone);
+  }
+  return '';
+}
+
 function testRecipientAllowed(payload, channel, env = process.env) {
   if ((env.CRM_DELIVERY_MODE || 'test') === 'live') {
     return true;
   }
 
   const allowlist = parseTestRecipients(env.CRM_TEST_RECIPIENTS);
-  const recipient = channel === 'email' ? payload.email : payload.phone;
-  const candidates = [recipient, payload.user_id ? `user:${payload.user_id}` : '']
-    .map(normalizeRecipient)
-    .filter(Boolean);
+  const recipient = channelRecipient(payload, channel);
 
-  return candidates.some((candidate) => allowlist.has(candidate));
+  return Boolean(recipient && allowlist.has(recipient));
 }
 
 function gatewayAuthorized(authorization, expectedToken) {
@@ -187,7 +194,8 @@ function deliveryId(payload, action, channel) {
     order_id: payload.order_id || '',
     flow: action.flow,
     scheduled_at: action.scheduled_at || '',
-    channel
+    channel,
+    recipient: channelRecipient(payload, channel)
   }));
 }
 
@@ -261,11 +269,39 @@ async function responseJson(response) {
   }
 }
 
+function redisCredentials(env = process.env) {
+  const candidates = [
+    [env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN],
+    [env.UPSTASH_REDIS_KV_REST_API_URL, env.UPSTASH_REDIS_KV_REST_API_TOKEN],
+    [env.KV_REST_API_URL, env.KV_REST_API_TOKEN]
+  ];
+
+  for (const [url, token] of candidates) {
+    if (url && token) {
+      return { url, token };
+    }
+  }
+
+  return { url: '', token: '' };
+}
+
+function redisCredentialReadiness(credentials) {
+  return {
+    url: /^https:\/\/.+/i.test(String(credentials.url || '')),
+    token: String(credentials.token || '').length >= 12
+  };
+}
+
 async function redisCommand(args, env, fetchImpl) {
-  const response = await fetchImpl(env.UPSTASH_REDIS_REST_URL, {
+  const credentials = redisCredentials(env);
+  const readiness = redisCredentialReadiness(credentials);
+  if (!readiness.url || !readiness.token) {
+    throw new Error('redis_credentials_invalid');
+  }
+  const response = await fetchImpl(credentials.url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+      Authorization: `Bearer ${credentials.token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(args)
@@ -435,20 +471,22 @@ function providerConfigured(channel, env) {
 
 function deliveryReadiness(env = process.env) {
   const mode = env.CRM_DELIVERY_MODE || 'test';
+  const redis = redisCredentials(env);
+  const redisReady = redisCredentialReadiness(redis);
   const missing = [];
   const required = [
-    'DOWNSTREAM_CRM_API_KEY',
-    'UPSTASH_REDIS_REST_URL',
-    'UPSTASH_REDIS_REST_TOKEN',
-    'RESEND_API_KEY',
-    'RESEND_FROM_EMAIL',
-    'SOLAPI_API_KEY',
-    'SOLAPI_API_SECRET',
-    'SOLAPI_KAKAO_PF_ID'
+    ['DOWNSTREAM_CRM_API_KEY', env.DOWNSTREAM_CRM_API_KEY],
+    ['UPSTASH_REDIS_REST_URL', redisReady.url],
+    ['UPSTASH_REDIS_REST_TOKEN', redisReady.token],
+    ['RESEND_API_KEY', env.RESEND_API_KEY],
+    ['RESEND_FROM_EMAIL', env.RESEND_FROM_EMAIL],
+    ['SOLAPI_API_KEY', env.SOLAPI_API_KEY],
+    ['SOLAPI_API_SECRET', env.SOLAPI_API_SECRET],
+    ['SOLAPI_KAKAO_PF_ID', env.SOLAPI_KAKAO_PF_ID]
   ];
 
-  for (const key of required) {
-    if (!env[key]) {
+  for (const [key, value] of required) {
+    if (!value) {
       missing.push(key);
     }
   }
@@ -466,7 +504,7 @@ function deliveryReadiness(env = process.env) {
     providers: {
       email: providerConfigured('email', env),
       kakao: providerConfigured('kakao', env),
-      scheduler: Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN)
+      scheduler: redisReady.url && redisReady.token
     },
     test_recipient_count: parseTestRecipients(env.CRM_TEST_RECIPIENTS).size
   };
@@ -609,6 +647,7 @@ export {
   normalizePhone,
   parseTestRecipients,
   processDelivery,
+  redisCredentials,
   renderMessage,
   solapiAuthorization,
   testRecipientAllowed,

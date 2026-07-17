@@ -436,6 +436,10 @@ test('Vercel env readiness includes first-party delivery gateway credentials', a
     'CRM_TEST_RECIPIENTS',
     'UPSTASH_REDIS_REST_URL',
     'UPSTASH_REDIS_REST_TOKEN',
+    'UPSTASH_REDIS_KV_REST_API_URL',
+    'UPSTASH_REDIS_KV_REST_API_TOKEN',
+    'KV_REST_API_URL',
+    'KV_REST_API_TOKEN',
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
     'SOLAPI_API_KEY',
@@ -467,6 +471,110 @@ test('Vercel env readiness includes first-party delivery gateway credentials', a
     assert.equal(result.body.summary.missing.includes('SOLAPI_KAKAO_PF_ID'), true);
     assert.equal(result.body.next_actions.some((action) => action.id === 'delivery_gateway'), true);
     assert.equal(JSON.stringify(result.body).includes('re_secret'), false);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test('Vercel env readiness accepts Upstash aliases as canonical Redis credentials', async () => {
+  const gatewayKeys = [
+    'DOWNSTREAM_CRM_API_KEY',
+    'CRM_DELIVERY_MODE',
+    'CRM_TEST_RECIPIENTS',
+    'UPSTASH_REDIS_REST_URL',
+    'UPSTASH_REDIS_REST_TOKEN',
+    'UPSTASH_REDIS_KV_REST_API_URL',
+    'UPSTASH_REDIS_KV_REST_API_TOKEN',
+    'KV_REST_API_URL',
+    'KV_REST_API_TOKEN',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
+    'SOLAPI_API_KEY',
+    'SOLAPI_API_SECRET',
+    'SOLAPI_KAKAO_PF_ID'
+  ];
+  const keys = [...new Set([...ENV_KEYS, ...gatewayKeys])];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const aliasPairs = [
+    {
+      UPSTASH_REDIS_KV_REST_API_URL: 'https://vercel-kv.example.test',
+      UPSTASH_REDIS_KV_REST_API_TOKEN: 'vercel-kv-token-value'
+    },
+    {
+      KV_REST_API_URL: 'https://kv.example.test',
+      KV_REST_API_TOKEN: 'kv-token-value'
+    }
+  ];
+
+  try {
+    for (const key of keys) {
+      delete process.env[key];
+    }
+
+    Object.assign(process.env, {
+      NEXT_PUBLIC_GTM_ID: 'GTM-ABCDE12',
+      NEXT_PUBLIC_CRM_WEBHOOK_URL: '/api/crm/events',
+      NEXT_PUBLIC_APP_URL: 'https://auto-marketing-sigma.vercel.app',
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://auto-marketing-sigma.vercel.app/api/crm/downstream',
+      NEXT_PUBLIC_GA4_MEASUREMENT_ID: 'G-ABCDE12345',
+      NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID: 'AW-123456789',
+      NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL: 'purchaseLabel123',
+      NEXT_PUBLIC_META_PIXEL_ID: '123456789',
+      DOWNSTREAM_CRM_API_KEY: 'random-token-with-at-least-24-chars',
+      CRM_DELIVERY_MODE: 'test',
+      CRM_TEST_RECIPIENTS: 'buyer@example.test,01012345678',
+      RESEND_API_KEY: 're_example_key',
+      RESEND_FROM_EMAIL: 'Store <hello@example.test>',
+      SOLAPI_API_KEY: 'solapi-key',
+      SOLAPI_API_SECRET: 'solapi-secret-value',
+      SOLAPI_KAKAO_PF_ID: 'PF_TEST'
+    });
+
+    for (const aliases of aliasPairs) {
+      delete process.env.UPSTASH_REDIS_KV_REST_API_URL;
+      delete process.env.UPSTASH_REDIS_KV_REST_API_TOKEN;
+      delete process.env.KV_REST_API_URL;
+      delete process.env.KV_REST_API_TOKEN;
+      Object.assign(process.env, aliases);
+
+      const result = await invoke(envStatusHandler, 'GET');
+      const redisChecks = result.body.checks.filter((check) => check.key.startsWith('UPSTASH_REDIS_REST_'));
+
+      assert.equal(result.body.ready, true);
+      assert.deepEqual(redisChecks.map((check) => check.key), [
+        'UPSTASH_REDIS_REST_URL',
+        'UPSTASH_REDIS_REST_TOKEN'
+      ]);
+      assert.equal(redisChecks.every((check) => check.status === 'ready' && check.has_value), true);
+      assert.equal(JSON.stringify(result.body).includes(Object.values(aliases)[1]), false);
+    }
+
+    for (const partial of [
+      {
+        UPSTASH_REDIS_KV_REST_API_URL: 'https://mixed.example.test',
+        KV_REST_API_TOKEN: 'mixed-token-value'
+      },
+      {
+        UPSTASH_REDIS_REST_URL: 'https://partial.example.test'
+      }
+    ]) {
+      delete process.env.UPSTASH_REDIS_REST_URL;
+      delete process.env.UPSTASH_REDIS_REST_TOKEN;
+      delete process.env.UPSTASH_REDIS_KV_REST_API_URL;
+      delete process.env.UPSTASH_REDIS_KV_REST_API_TOKEN;
+      delete process.env.KV_REST_API_URL;
+      delete process.env.KV_REST_API_TOKEN;
+      Object.assign(process.env, partial);
+
+      const result = await invoke(envStatusHandler, 'GET');
+      const redisChecks = result.body.checks.filter((check) => check.key.startsWith('UPSTASH_REDIS_REST_'));
+
+      assert.equal(result.body.ready, false);
+      assert.equal(redisChecks.every((check) => check.status === 'missing' && !check.has_value), true);
+    }
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];

@@ -77,7 +77,9 @@ SOLAPI_KAKAO_PF_ID=replace-with-kakao-profile-id
 SOLAPI_KAKAO_TARGETING=I
 ```
 
-`DOWNSTREAM_CRM_API_KEY`는 `/api/crm/events`의 전달 토큰이자 `/api/crm/downstream`의 Bearer 검증 값입니다. `CRM_DELIVERY_MODE=test`에서는 `CRM_TEST_RECIPIENTS`에 정확히 일치하는 이메일/전화번호에만 발송됩니다. 공급자 QA와 수신동의 차단 검증이 끝나기 전에는 `live`로 전환하지 않습니다.
+Vercel Marketplace에서 Upstash Redis의 custom prefix를 `UPSTASH_REDIS`로 지정하면 `UPSTASH_REDIS_KV_REST_API_URL`과 `UPSTASH_REDIS_KV_REST_API_TOKEN`이 생성됩니다. 앱은 URL과 토큰이 모두 있는 완전한 쌍만 canonical 변수인 `UPSTASH_REDIS_REST_URL`과 `UPSTASH_REDIS_REST_TOKEN`의 alias로 인식하므로 canonical 변수를 중복 등록할 필요가 없습니다. 직접 설정할 때는 위 수동 env 예시를 그대로 사용합니다.
+
+실제 downstream이 구성된 연락처 CRM 이벤트는 서버에서 `Authorization: Bearer` 헤더를 붙여 전송해야 합니다. 토큰은 `CRM_EVENT_INGEST_API_KEY`를 우선 사용하고, 없으면 `DOWNSTREAM_CRM_API_KEY`를 사용합니다. 두 값은 브라우저 코드나 `NEXT_PUBLIC_*` 변수에 노출하지 않으며, `DOWNSTREAM_CRM_API_KEY`는 `/api/crm/downstream`의 Bearer 검증에도 사용됩니다. `CRM_DELIVERY_MODE=test`에서는 `CRM_TEST_RECIPIENTS`에 정확히 일치하는 실제 이메일/전화번호만 허용하고 `user_id`로 우회할 수 없습니다. 공급자 QA와 수신동의 차단 검증이 끝나기 전에는 `live`로 전환하지 않습니다.
 
 Resend 발신 도메인과 SOLAPI 카카오 채널 프로필은 각 공급자에서 먼저 인증해야 합니다. 예약 발송은 공급자 네이티브 예약 기능을 사용하고, Upstash Redis에는 개인정보 원문 대신 해시 인덱스와 공급자 예약 ID만 저장합니다. `purchase`가 수신되면 같은 사용자, 이메일, 전화번호 또는 장바구니에 연결된 이탈 메시지 예약을 취소합니다.
 

@@ -10,6 +10,7 @@ import {
   deliveryReadiness,
   gatewayAuthorized,
   processDelivery,
+  redisCredentials,
   solapiAuthorization,
   testRecipientAllowed,
   validateGatewayPayload
@@ -25,7 +26,7 @@ const READY_ENV = {
   CRM_TEST_RECIPIENTS: 'buyer@example.test,01012345678',
   NEXT_PUBLIC_APP_URL: 'https://store.example.test',
   UPSTASH_REDIS_REST_URL: 'https://redis.example.test',
-  UPSTASH_REDIS_REST_TOKEN: 'redis-token',
+  UPSTASH_REDIS_REST_TOKEN: 'redis-token-value',
   RESEND_API_KEY: 're_test_key',
   RESEND_FROM_EMAIL: 'Store <hello@example.test>',
   SOLAPI_API_KEY: 'solapi-key',
@@ -42,7 +43,7 @@ function jsonResponse(status, body) {
   };
 }
 
-function createDeliveryFetch() {
+function createDeliveryFetch(redisUrl = READY_ENV.UPSTASH_REDIS_REST_URL) {
   const strings = new Map();
   const sets = new Map();
   const calls = [];
@@ -51,7 +52,7 @@ function createDeliveryFetch() {
   async function fetchImpl(url, options = {}) {
     calls.push({ url, options });
 
-    if (url === READY_ENV.UPSTASH_REDIS_REST_URL) {
+    if (url === redisUrl) {
       const [command, key, ...args] = JSON.parse(options.body);
       switch (command) {
         case 'SET': {
@@ -190,6 +191,164 @@ test('reports provider readiness without exposing credential values', () => {
   assert.equal(serialized.includes(READY_ENV.SOLAPI_API_SECRET), false);
 });
 
+test('selects the first complete Redis credential namespace without mixing partial values', () => {
+  assert.deepEqual(redisCredentials({
+    UPSTASH_REDIS_REST_URL: 'https://canonical.example.test',
+    UPSTASH_REDIS_REST_TOKEN: 'canonical-token',
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token',
+    KV_REST_API_URL: 'https://kv.example.test',
+    KV_REST_API_TOKEN: 'kv-token'
+  }), {
+    url: 'https://canonical.example.test',
+    token: 'canonical-token'
+  });
+
+  assert.deepEqual(redisCredentials({
+    UPSTASH_REDIS_REST_URL: 'https://canonical.example.test',
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token',
+    KV_REST_API_URL: 'https://kv.example.test',
+    KV_REST_API_TOKEN: 'kv-token-value'
+  }), {
+    url: 'https://marketplace.example.test',
+    token: 'marketplace-token'
+  });
+
+  assert.deepEqual(redisCredentials({
+    UPSTASH_REDIS_REST_URL: 'https://canonical.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+  }), {
+    url: '',
+    token: ''
+  });
+
+  assert.deepEqual(redisCredentials({
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+    KV_REST_API_TOKEN: 'kv-token-value'
+  }), {
+    url: '',
+    token: ''
+  });
+
+  assert.deepEqual(redisCredentials({
+    KV_REST_API_URL: 'https://kv.example.test',
+    KV_REST_API_TOKEN: 'kv-token-value'
+  }), {
+    url: 'https://kv.example.test',
+    token: 'kv-token-value'
+  });
+
+  assert.deepEqual(redisCredentials({
+    UPSTASH_REDIS_REST_URL: 'http://canonical.example.test',
+    UPSTASH_REDIS_REST_TOKEN: 'canonical-token',
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+  }), {
+    url: 'http://canonical.example.test',
+    token: 'canonical-token'
+  });
+});
+
+test('uses Vercel Redis aliases for scheduler readiness and commands', async () => {
+  const aliases = [
+    {
+      urlKey: 'UPSTASH_REDIS_KV_REST_API_URL',
+      tokenKey: 'UPSTASH_REDIS_KV_REST_API_TOKEN',
+      url: 'https://marketplace.example.test',
+      token: 'marketplace-token'
+    },
+    {
+      urlKey: 'KV_REST_API_URL',
+      tokenKey: 'KV_REST_API_TOKEN',
+      url: 'https://kv.example.test',
+      token: '123456789012'
+    }
+  ];
+
+  for (const alias of aliases) {
+    const env = { ...READY_ENV };
+    delete env.UPSTASH_REDIS_REST_URL;
+    delete env.UPSTASH_REDIS_REST_TOKEN;
+    env[alias.urlKey] = alias.url;
+    env[alias.tokenKey] = alias.token;
+
+    const readiness = deliveryReadiness(env);
+    assert.equal(readiness.ready, true);
+    assert.equal(readiness.providers.scheduler, true);
+    assert.equal(readiness.missing.includes('UPSTASH_REDIS_REST_URL'), false);
+    assert.equal(readiness.missing.includes('UPSTASH_REDIS_REST_TOKEN'), false);
+    assert.equal(JSON.stringify(readiness).includes(alias.token), false);
+
+    const mock = createDeliveryFetch(alias.url);
+    const result = await processDelivery(cartPayload(), { env, fetchImpl: mock.fetchImpl, now: NOW });
+    const redisCalls = mock.calls.filter((call) => call.url === alias.url);
+
+    assert.equal(result.summary.scheduled, 1);
+    assert.equal(redisCalls.length > 0, true);
+    assert.equal(redisCalls[0].options.headers.Authorization, `Bearer ${alias.token}`);
+  }
+
+  const unsafeCredentials = [
+    {
+      values: {
+        UPSTASH_REDIS_REST_URL: 'https://canonical.example.test',
+        UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+      },
+      missing: ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']
+    },
+    {
+      values: {
+        UPSTASH_REDIS_KV_REST_API_URL: 'http://marketplace.example.test',
+        UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+      },
+      missing: ['UPSTASH_REDIS_REST_URL']
+    },
+    {
+      values: {
+        KV_REST_API_URL: 'https://kv.example.test',
+        KV_REST_API_TOKEN: 'short-token'
+      },
+      missing: ['UPSTASH_REDIS_REST_TOKEN']
+    },
+    {
+      values: {
+        UPSTASH_REDIS_REST_URL: 'http://canonical.example.test',
+        UPSTASH_REDIS_REST_TOKEN: 'canonical-token',
+        UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+        UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+      },
+      missing: ['UPSTASH_REDIS_REST_URL']
+    }
+  ];
+
+  for (const unsafe of unsafeCredentials) {
+    const env = { ...READY_ENV };
+    delete env.UPSTASH_REDIS_REST_URL;
+    delete env.UPSTASH_REDIS_REST_TOKEN;
+    Object.assign(env, unsafe.values);
+
+    const readiness = deliveryReadiness(env);
+    assert.equal(readiness.ready, false);
+    assert.equal(readiness.providers.scheduler, false);
+    for (const missing of unsafe.missing) {
+      assert.equal(readiness.missing.includes(missing), true);
+    }
+
+    let fetchCalled = false;
+    const result = await processDelivery(cartPayload(), {
+      env,
+      now: NOW,
+      fetchImpl: async () => {
+        fetchCalled = true;
+        throw new Error('should_not_fetch');
+      }
+    });
+    assert.equal(result.results.some((item) => item.reason === 'scheduler_not_configured'), true);
+    assert.equal(fetchCalled, false);
+  }
+});
+
 test('creates deterministic SOLAPI HMAC authorization', () => {
   const date = '2026-07-17T00:00:00.000Z';
   const salt = 'fixed-salt';
@@ -213,11 +372,12 @@ test('builds provider-native scheduled email and Kakao payloads', () => {
   assert.equal(kakao.request.messages[0].kakaoOptions.bms.targeting, 'I');
 });
 
-test('test mode suppresses recipients outside the explicit allowlist', async () => {
+test('test mode does not allow user_id to bypass the channel recipient allowlist', async () => {
   const payload = { ...cartPayload(), email: 'other@example.test' };
+  const env = { ...READY_ENV, CRM_TEST_RECIPIENTS: 'user:USER-1' };
   let fetchCalled = false;
   const result = await processDelivery(payload, {
-    env: READY_ENV,
+    env,
     now: NOW,
     fetchImpl: async () => {
       fetchCalled = true;
@@ -225,10 +385,63 @@ test('test mode suppresses recipients outside the explicit allowlist', async () 
     }
   });
 
-  assert.equal(testRecipientAllowed(payload, 'email', READY_ENV), false);
+  assert.equal(testRecipientAllowed(payload, 'email', env), false);
+  assert.equal(testRecipientAllowed({ ...payload, email: '', phone: '01012345678' }, 'kakao', env), false);
   assert.equal(result.summary.suppressed, 1);
   assert.equal(result.summary.skipped, 1);
   assert.equal(fetchCalled, false);
+});
+
+test('schedules same-time events independently per normalized recipient', async () => {
+  const env = {
+    ...READY_ENV,
+    CRM_TEST_RECIPIENTS: 'buyer@example.test,other@example.test'
+  };
+  const mock = createDeliveryFetch();
+  const first = await processDelivery(cartPayload(), { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const second = await processDelivery({
+    ...cartPayload(),
+    email: 'other@example.test'
+  }, { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const normalizedDuplicate = await processDelivery({
+    ...cartPayload(),
+    email: ' BUYER@EXAMPLE.TEST '
+  }, { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const emailCalls = mock.calls.filter((call) => call.url === 'https://api.resend.com/emails');
+
+  assert.equal(first.summary.scheduled, 1);
+  assert.equal(second.summary.scheduled, 1);
+  assert.equal(normalizedDuplicate.results.some((result) => result.reason === 'duplicate_delivery'), true);
+  assert.equal(emailCalls.length, 2);
+});
+
+test('schedules same-time Kakao events independently per normalized phone recipient', async () => {
+  const env = {
+    ...READY_ENV,
+    CRM_TEST_RECIPIENTS: '01012345678,01099998888'
+  };
+  const mock = createDeliveryFetch();
+  const first = await processDelivery({
+    ...cartPayload(),
+    email: '',
+    phone: '82-10-1234-5678'
+  }, { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const second = await processDelivery({
+    ...cartPayload(),
+    email: '',
+    phone: '010-9999-8888'
+  }, { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const normalizedDuplicate = await processDelivery({
+    ...cartPayload(),
+    email: '',
+    phone: '010-1234-5678'
+  }, { env, fetchImpl: mock.fetchImpl, now: NOW });
+  const kakaoCalls = mock.calls.filter((call) => call.url === 'https://api.solapi.com/messages/v4/send-many/detail');
+
+  assert.equal(first.summary.scheduled, 1);
+  assert.equal(second.summary.scheduled, 1);
+  assert.equal(normalizedDuplicate.results.some((result) => result.reason === 'duplicate_delivery'), true);
+  assert.equal(kakaoCalls.length, 2);
 });
 
 test('schedules once and cancels the pending reminder on purchase', async () => {

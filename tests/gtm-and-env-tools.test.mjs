@@ -11,6 +11,7 @@ import { buildContainerImport } from '../scripts/generate-gtm-import.mjs';
 import {
   classifyUrl,
   discoverStorefrontUrls,
+  normalizeDeploymentEnvValues,
   parseArgs,
   parseDotenv,
   validateDeploymentEnv
@@ -93,6 +94,52 @@ test('parses deployment env validator CLI arguments', () => {
   assert.equal(parsed.strict, true);
 });
 
+test('normalizes Vercel Upstash aliases to canonical Redis env keys', () => {
+  assert.deepEqual(normalizeDeploymentEnvValues({
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://vercel-kv.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'vercel-kv-token'
+  }), {
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://vercel-kv.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'vercel-kv-token',
+    UPSTASH_REDIS_REST_URL: 'https://vercel-kv.example.test',
+    UPSTASH_REDIS_REST_TOKEN: 'vercel-kv-token'
+  });
+
+  const canonical = normalizeDeploymentEnvValues({
+    UPSTASH_REDIS_REST_URL: 'https://canonical.example.test',
+    UPSTASH_REDIS_REST_TOKEN: 'canonical-token',
+    KV_REST_API_URL: 'https://alias.example.test',
+    KV_REST_API_TOKEN: 'alias-token-value'
+  });
+
+  assert.equal(canonical.UPSTASH_REDIS_REST_URL, 'https://canonical.example.test');
+  assert.equal(canonical.UPSTASH_REDIS_REST_TOKEN, 'canonical-token');
+
+  const completeAlias = normalizeDeploymentEnvValues({
+    UPSTASH_REDIS_REST_URL: 'https://partial-canonical.example.test',
+    UPSTASH_REDIS_KV_REST_API_URL: 'https://marketplace.example.test',
+    UPSTASH_REDIS_KV_REST_API_TOKEN: 'marketplace-token'
+  });
+
+  assert.equal(completeAlias.UPSTASH_REDIS_REST_URL, 'https://marketplace.example.test');
+  assert.equal(completeAlias.UPSTASH_REDIS_REST_TOKEN, 'marketplace-token');
+
+  for (const partial of [
+    {
+      UPSTASH_REDIS_KV_REST_API_URL: 'https://mixed.example.test',
+      KV_REST_API_TOKEN: 'mixed-token-value'
+    },
+    {
+      UPSTASH_REDIS_REST_URL: 'https://partial.example.test'
+    }
+  ]) {
+    const normalized = normalizeDeploymentEnvValues(partial);
+
+    assert.equal(normalized.UPSTASH_REDIS_REST_URL, '');
+    assert.equal(normalized.UPSTASH_REDIS_REST_TOKEN, '');
+  }
+});
+
 test('deployment env validator reports ready only for real-looking IDs', async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-'));
 
@@ -159,6 +206,69 @@ test('self-hosted delivery gateway requires both providers, Redis, auth, and tes
     const ready = await validateDeploymentEnv(tmp);
     assert.equal(ready.ready, true);
     assert.deepEqual(ready.summary.missing, []);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('self-hosted delivery gateway accepts Vercel Upstash source aliases', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-env-gateway-alias-'));
+  const base = [
+    'NEXT_PUBLIC_GTM_ID=GTM-ABC1234',
+    'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
+    'NEXT_PUBLIC_APP_URL=https://store.example.test',
+    'DOWNSTREAM_CRM_WEBHOOK_URL=https://store.example.test/api/crm/downstream',
+    'NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-ABCD123456',
+    'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-123456789',
+    'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=Purchase_Label_123',
+    'NEXT_PUBLIC_META_PIXEL_ID=1234567890',
+    'DOWNSTREAM_CRM_API_KEY=random-token-with-at-least-24-chars',
+    'CRM_DELIVERY_MODE=test',
+    'CRM_TEST_RECIPIENTS=buyer@example.test,01012345678',
+    'RESEND_API_KEY=re_example_key',
+    'RESEND_FROM_EMAIL=Store <hello@example.test>',
+    'SOLAPI_API_KEY=solapi-key',
+    'SOLAPI_API_SECRET=solapi-secret-value',
+    'SOLAPI_KAKAO_PF_ID=PF_TEST'
+  ];
+  const aliasPairs = [
+    [
+      'UPSTASH_REDIS_KV_REST_API_URL=https://redis.example.test',
+      'UPSTASH_REDIS_KV_REST_API_TOKEN=upstash-token-value'
+    ],
+    [
+      'KV_REST_API_URL=https://redis.example.test',
+      'KV_REST_API_TOKEN=upstash-token-value'
+    ]
+  ];
+
+  try {
+    for (const aliases of aliasPairs) {
+      await writeFile(path.join(tmp, '.env.local'), `${[...base, ...aliases].join('\n')}\n`);
+      const report = await validateDeploymentEnv(tmp);
+
+      assert.equal(report.ready, true);
+      assert.equal(report.checks.find((check) => check.key === 'UPSTASH_REDIS_REST_URL').status, 'ready');
+      assert.equal(report.checks.find((check) => check.key === 'UPSTASH_REDIS_REST_TOKEN').status, 'ready');
+      assert.equal(report.checks.some((check) => check.key === aliases[0].split('=')[0]), false);
+    }
+
+    for (const partial of [
+      [
+        'UPSTASH_REDIS_KV_REST_API_URL=https://mixed.example.test',
+        'KV_REST_API_TOKEN=mixed-token-value'
+      ],
+      [
+        'UPSTASH_REDIS_REST_URL=https://partial.example.test'
+      ]
+    ]) {
+      await writeFile(path.join(tmp, '.env.local'), `${[...base, ...partial].join('\n')}\n`);
+      const report = await validateDeploymentEnv(tmp);
+
+      assert.equal(report.ready, false);
+      assert.equal(report.summary.missing.includes('UPSTASH_REDIS_REST_URL'), true);
+      assert.equal(report.summary.missing.includes('UPSTASH_REDIS_REST_TOKEN'), true);
+    }
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

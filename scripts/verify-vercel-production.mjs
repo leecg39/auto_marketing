@@ -390,8 +390,7 @@ async function verifyVercelProduction(options) {
         event_name: 'purchase',
         occurred_at: '2026-07-05T05:10:00.000Z',
         transaction_id: `ORDER_PROD_VERIFY_${Date.now()}`,
-        email: 'demo@example.test',
-        marketing_consent: true,
+        marketing_consent: false,
         value: 129000,
         metadata: { order_count: 1 }
       })

@@ -9,6 +9,23 @@ const DEFAULT_ENV_FILES = [
   '.env.marketing'
 ];
 
+const DEPLOYMENT_ENV_ALIASES = {
+  UPSTASH_REDIS_REST_URL: [
+    'UPSTASH_REDIS_KV_REST_API_URL',
+    'KV_REST_API_URL'
+  ],
+  UPSTASH_REDIS_REST_TOKEN: [
+    'UPSTASH_REDIS_KV_REST_API_TOKEN',
+    'KV_REST_API_TOKEN'
+  ]
+};
+
+const UPSTASH_REDIS_ENV_PAIRS = [
+  ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
+  ['UPSTASH_REDIS_KV_REST_API_URL', 'UPSTASH_REDIS_KV_REST_API_TOKEN'],
+  ['KV_REST_API_URL', 'KV_REST_API_TOKEN']
+];
+
 const REQUIREMENTS = [
   {
     key: 'NEXT_PUBLIC_GTM_ID',
@@ -343,6 +360,18 @@ async function loadEnv(root, envFiles = DEFAULT_ENV_FILES) {
   return { loaded, values };
 }
 
+function normalizeDeploymentEnvValues(values = {}) {
+  const normalized = { ...values };
+  const sourcePair = UPSTASH_REDIS_ENV_PAIRS.find(([urlKey, tokenKey]) =>
+    values[urlKey] && values[tokenKey]
+  );
+
+  normalized.UPSTASH_REDIS_REST_URL = sourcePair ? values[sourcePair[0]] : '';
+  normalized.UPSTASH_REDIS_REST_TOKEN = sourcePair ? values[sourcePair[1]] : '';
+
+  return normalized;
+}
+
 function classifyRequirement(requirement, values) {
   const value = values[requirement.key] || '';
 
@@ -397,10 +426,11 @@ function summarize(results) {
 async function validateDeploymentEnv(root, options = {}) {
   const envFiles = options.envFile ? [options.envFile] : options.envFiles || DEFAULT_ENV_FILES;
   const env = await loadEnv(root, envFiles);
-  const results = deploymentRequirements(env.values)
-    .map((requirement) => classifyRequirement(requirement, env.values));
+  const values = normalizeDeploymentEnvValues(env.values);
+  const results = deploymentRequirements(values)
+    .map((requirement) => classifyRequirement(requirement, values));
   const summary = summarize(results);
-  const urlDiscovery = await discoverStorefrontUrls(root, env.values);
+  const urlDiscovery = await discoverStorefrontUrls(root, values);
 
   return {
     root,
@@ -494,12 +524,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
 }
 
 export {
+  DEPLOYMENT_ENV_ALIASES,
   DELIVERY_GATEWAY_REQUIREMENTS,
   REQUIREMENTS,
   classifyRequirement,
   classifyUrl,
   discoverStorefrontUrls,
   deploymentRequirements,
+  normalizeDeploymentEnvValues,
   parseArgs,
   parseDotenv,
   summarize,
