@@ -1,3 +1,8 @@
+// @TASK CRM-EVENT-INGEST-AUTH - Protect downstream contact forwarding
+// @SPEC docs/live-deployment.md#crm-연결
+// @TEST tests/vercel-surface.test.mjs
+const { createHash, timingSafeEqual } = require('node:crypto');
+
 const REQUIRED_FIELDS = ['event_name', 'occurred_at'];
 const LIFECYCLE_EVENTS = new Set(['dormant_60_days', 'dormant_90_days', 'vip_qualified']);
 
@@ -51,12 +56,39 @@ function pickAllowedFields(payload) {
     cart_id: payload.cart_id || '',
     order_id: payload.order_id || payload.transaction_id || '',
     value: Number.isFinite(Number(payload.value)) ? Number(payload.value) : undefined,
-    occurred_at: payload.occurred_at || new Date().toISOString(),
+    occurred_at: payload.occurred_at || '',
     utm_source: payload.utm_source || '',
     utm_medium: payload.utm_medium || '',
     utm_campaign: payload.utm_campaign || '',
     metadata: payload.metadata || {}
   };
+}
+
+function safeEqual(left, right) {
+  const leftValue = String(left || '');
+  const rightValue = String(right || '');
+
+  if (!leftValue || !rightValue) {
+    return false;
+  }
+
+  const leftDigest = createHash('sha256').update(leftValue).digest();
+  const rightDigest = createHash('sha256').update(rightValue).digest();
+  return timingSafeEqual(leftDigest, rightDigest);
+}
+
+function contactForwardingAuthorized(request, payload) {
+  const downstreamUrl = process.env.DOWNSTREAM_CRM_WEBHOOK_URL || '';
+  if (!downstreamUrl || (!payload.email && !payload.phone)) {
+    return true;
+  }
+
+  const expectedToken = process.env.CRM_EVENT_INGEST_API_KEY ||
+    process.env.DOWNSTREAM_CRM_API_KEY ||
+    '';
+  const authorization = request.headers?.authorization || request.headers?.Authorization || '';
+  const match = String(authorization).match(/^Bearer\s+(.+)$/i);
+  return Boolean(match && safeEqual(match[1], expectedToken));
 }
 
 function validatePayload(payload, flowByEvent) {
@@ -168,6 +200,14 @@ async function handler(request, response) {
     sendJson(response, 422, {
       ok: false,
       errors
+    });
+    return;
+  }
+
+  if (!contactForwardingAuthorized(request, payload)) {
+    sendJson(response, 401, {
+      ok: false,
+      errors: ['unauthorized']
     });
     return;
   }

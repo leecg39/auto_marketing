@@ -30,10 +30,13 @@ const ENV_KEYS = [
 ];
 
 class MockRequest extends Readable {
-  constructor(method, body = '') {
+  constructor(method, body = '', headers = {}) {
     super();
     this.method = method;
-    this.headers = { 'content-type': 'application/json' };
+    this.headers = {
+      'content-type': 'application/json',
+      ...headers
+    };
     this.bodyText = body;
     this.sent = false;
   }
@@ -70,8 +73,12 @@ class MockResponse {
   }
 }
 
-async function invoke(handler, method, payload) {
-  const request = new MockRequest(method, payload === undefined ? '' : JSON.stringify(payload));
+async function invoke(handler, method, payload, headers = {}) {
+  const request = new MockRequest(
+    method,
+    payload === undefined ? '' : JSON.stringify(payload),
+    headers
+  );
   const response = new MockResponse();
 
   await handler(request, response);
@@ -96,28 +103,206 @@ async function invokeRaw(handler, method, payload) {
   };
 }
 
-test('Vercel CRM event API returns automation actions for production demo events', async () => {
-  const result = await invoke(crmHandler, 'POST', {
-    event_name: 'purchase',
-    occurred_at: '2026-07-05T00:00:00.000Z',
-    transaction_id: 'ORDER_VERCEL_001',
-    email: 'demo@example.test',
-    marketing_consent: true,
-    value: 129000,
-    metadata: { order_count: 1 }
-  });
+// @TASK CRM-EVENT-INGEST-AUTH - Verify downstream contact forwarding authentication
+// @SPEC docs/live-deployment.md#crm-연결
+test('Vercel CRM event API preserves unauthenticated demo mode without a downstream', async () => {
+  const previousUrl = process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+  const previousFetch = globalThis.fetch;
+  let fetchCalls = 0;
 
-  assert.equal(result.status, 202);
-  assert.equal(result.body.ok, true);
-  assert.equal(result.body.automation_flow, 'post_purchase_review_and_recommendation');
-  assert.deepEqual(result.body.automation_actions.map((action) => action.flow), [
-    'first_purchase_thank_you',
-    'review_request',
-    'repurchase_due',
-    'purchase_exclusion'
-  ]);
-  assert.equal(result.body.delivery.status, 202);
-  assert.equal(result.body.delivery.reason, 'serverless_demo_no_downstream');
+  try {
+    delete process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 202 };
+    };
+
+    const result = await invoke(crmHandler, 'POST', {
+      event_name: 'purchase',
+      occurred_at: '2026-07-05T00:00:00.000Z',
+      transaction_id: 'ORDER_VERCEL_001',
+      email: 'demo@example.test',
+      marketing_consent: true,
+      value: 129000,
+      metadata: { order_count: 1 }
+    });
+
+    assert.equal(result.status, 202);
+    assert.equal(result.body.ok, true);
+    assert.equal(result.body.automation_flow, 'post_purchase_review_and_recommendation');
+    assert.deepEqual(result.body.automation_actions.map((action) => action.flow), [
+      'first_purchase_thank_you',
+      'review_request',
+      'repurchase_due',
+      'purchase_exclusion'
+    ]);
+    assert.equal(result.body.delivery.status, 202);
+    assert.equal(result.body.delivery.reason, 'serverless_demo_no_downstream');
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+    else process.env.DOWNSTREAM_CRM_WEBHOOK_URL = previousUrl;
+  }
+});
+
+test('Vercel CRM event API authenticates contact forwarding with the ingest key and fallback key', async () => {
+  const envKeys = [
+    'DOWNSTREAM_CRM_WEBHOOK_URL',
+    'CRM_EVENT_INGEST_API_KEY',
+    'DOWNSTREAM_CRM_API_KEY'
+  ];
+  const previous = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  const fetchCalls = [];
+
+  try {
+    Object.assign(process.env, {
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://crm.example.test/events',
+      CRM_EVENT_INGEST_API_KEY: 'ingest-primary-secret',
+      DOWNSTREAM_CRM_API_KEY: 'downstream-fallback-secret'
+    });
+    globalThis.fetch = async (url, options) => {
+      fetchCalls.push({ url, options });
+      return { ok: true, status: 202 };
+    };
+
+    const primaryResult = await invoke(crmHandler, 'POST', {
+      event_name: 'generate_lead',
+      occurred_at: '2026-07-05T00:00:00.000Z',
+      email: 'primary@example.test',
+      marketing_consent: true
+    }, { authorization: 'Bearer ingest-primary-secret' });
+
+    delete process.env.CRM_EVENT_INGEST_API_KEY;
+    const fallbackResult = await invoke(crmHandler, 'POST', {
+      event_name: 'generate_lead',
+      occurred_at: '2026-07-05T00:00:00.000Z',
+      phone: '01012345678',
+      marketing_consent: true
+    }, { authorization: 'Bearer downstream-fallback-secret' });
+
+    assert.equal(primaryResult.status, 202);
+    assert.equal(fallbackResult.status, 202);
+    assert.equal(fetchCalls.length, 2);
+    assert.equal(fetchCalls[0].url, 'https://crm.example.test/events');
+    assert.equal(fetchCalls[0].options.headers.Authorization, 'Bearer downstream-fallback-secret');
+    assert.equal(fetchCalls[1].options.headers.Authorization, 'Bearer downstream-fallback-secret');
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test('Vercel CRM event API rejects unauthenticated contact forwarding without calling downstream', async () => {
+  const envKeys = [
+    'DOWNSTREAM_CRM_WEBHOOK_URL',
+    'CRM_EVENT_INGEST_API_KEY',
+    'DOWNSTREAM_CRM_API_KEY'
+  ];
+  const previous = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  try {
+    Object.assign(process.env, {
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://crm.example.test/events',
+      CRM_EVENT_INGEST_API_KEY: 'ingest-primary-secret',
+      DOWNSTREAM_CRM_API_KEY: 'downstream-fallback-secret'
+    });
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 202 };
+    };
+
+    const result = await invoke(crmHandler, 'POST', {
+      event_name: 'generate_lead',
+      occurred_at: '2026-07-05T00:00:00.000Z',
+      email: 'unauthenticated@example.test',
+      marketing_consent: true
+    });
+
+    assert.equal(result.status, 401);
+    assert.deepEqual(result.body.errors, ['unauthorized']);
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test('Vercel CRM event API rejects a mismatched Bearer token without calling downstream', async () => {
+  const envKeys = [
+    'DOWNSTREAM_CRM_WEBHOOK_URL',
+    'CRM_EVENT_INGEST_API_KEY',
+    'DOWNSTREAM_CRM_API_KEY'
+  ];
+  const previous = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  try {
+    Object.assign(process.env, {
+      DOWNSTREAM_CRM_WEBHOOK_URL: 'https://crm.example.test/events',
+      CRM_EVENT_INGEST_API_KEY: 'ingest-primary-secret',
+      DOWNSTREAM_CRM_API_KEY: 'downstream-fallback-secret'
+    });
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 202 };
+    };
+
+    const result = await invoke(crmHandler, 'POST', {
+      event_name: 'generate_lead',
+      occurred_at: '2026-07-05T00:00:00.000Z',
+      phone: '01012345678',
+      marketing_consent: true
+    }, { authorization: 'Bearer downstream-fallback-secret' });
+
+    assert.equal(result.status, 401);
+    assert.deepEqual(result.body.errors, ['unauthorized']);
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test('Vercel CRM event API rejects a missing occurred_at value', async () => {
+  const previousUrl = process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+  const previousFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  try {
+    delete process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+    globalThis.fetch = async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 202 };
+    };
+
+    const result = await invoke(crmHandler, 'POST', {
+      event_name: 'generate_lead',
+      email: 'missing-timestamp@example.test',
+      marketing_consent: true
+    });
+
+    assert.equal(result.status, 422);
+    assert.equal(result.body.errors.includes('occurred_at_required'), true);
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.DOWNSTREAM_CRM_WEBHOOK_URL;
+    else process.env.DOWNSTREAM_CRM_WEBHOOK_URL = previousUrl;
+  }
 });
 
 test('Vercel CRM event API rejects contact payloads without marketing consent', async () => {
