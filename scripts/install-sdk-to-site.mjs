@@ -100,6 +100,8 @@ function envExample() {
     'NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID=AW-XXXXXXXXX',
     'NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=replace-with-purchase-label',
     'NEXT_PUBLIC_META_PIXEL_ID=replace-with-meta-pixel-id',
+    'MARKETING_CRM_INGEST_URL=https://your-marketing-service.example/api/crm/events',
+    'CRM_EVENT_INGEST_API_KEY=replace-with-at-least-24-random-characters',
     ''
   ].join('\n');
 }
@@ -138,10 +140,40 @@ MarketingAutomation.trackViewItem(product);
 MarketingAutomation.trackAddToCart(product);
 MarketingAutomation.trackBeginCheckout(checkout);
 MarketingAutomation.trackPurchase(order);
-MarketingAutomation.trackSignUp({ method: 'email', email, marketing_consent: true });
+MarketingAutomation.trackSignUp({ method: 'email', user_id: userId, marketing_consent: true });
 MarketingAutomation.trackLogin({ method: 'email' });
-MarketingAutomation.trackGenerateLead({ value: 10000, email, phone, marketing_consent: true });
+MarketingAutomation.trackGenerateLead({ value: 10000, marketing_consent: true });
 \`\`\`
+
+## Contact delivery
+
+\`crmWebhookUrl\` must point to a same-origin server route. That route validates the
+signed-in session or submitted form, rebuilds trusted contact and consent fields,
+and then forwards the event with a server-only Bearer token:
+
+\`\`\`js
+const event = await request.json();
+const customer = await requireAuthenticatedCustomer(request);
+
+const response = await fetch(process.env.MARKETING_CRM_INGEST_URL, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + process.env.CRM_EVENT_INGEST_API_KEY
+  },
+  body: JSON.stringify({
+    ...event,
+    user_id: customer.id,
+    email: customer.email,
+    phone: customer.phone,
+    marketing_consent: customer.marketingConsent === true
+  })
+});
+\`\`\`
+
+Never expose \`CRM_EVENT_INGEST_API_KEY\` through \`NEXT_PUBLIC_*\`, browser
+configuration, HTML, or client JavaScript. Do not trust browser-supplied contact
+or consent without server-side session or form validation.
 
 ## Verify
 

@@ -437,5 +437,8 @@ npm run stop:local
 - Redis URL/토큰은 같은 namespace의 완전한 쌍만 선택하고, 테스트 allowlist는 실제 이메일/전화번호만 비교하도록 보강했습니다. 보안 재감사는 HIGH 이상 추가 문제 없이 통과했습니다.
 - 커밋 `a75ed1c`, `a85ca81`, `609191b`를 GitHub `main`에 푸시했고 Vercel production 배포가 `Ready` 상태입니다.
 - 전체 테스트 143/143, 정적 검사, 전체 로컬 QA 7/7, Vercel production QA 9/9가 통과했습니다.
+- SOLAPI 응답의 `groupInfo.count.registeredFailed`와 `failedMessageList`를 확인해 HTTP 200이라도 접수 실패를 `solapi_registration_failed`로 판정하고, 인증된 downstream 응답에 `provider_id`를 남기도록 보강했습니다.
+- 자사몰 브라우저는 서버 비밀을 보유하지 않습니다. same-origin CRM route가 로그인 세션 또는 검증된 폼을 확인하고 저장된 연락처·수신동의를 다시 구성한 뒤 서버 전용 Bearer 토큰으로 전달하는 설치 계약을 추가했습니다.
+- 보강 후 전체 테스트는 146/146, 정적 검사와 전체 로컬 QA 7/7가 통과했습니다.
 - 최신 완료 감사 결과는 8개 요구사항 중 7개 `complete`, 1개 `blocked_external`, `missing_evidence`와 `failed`는 0개입니다.
 - 운영 readiness에서 이메일 공급자와 scheduler는 준비 완료이며, 유일한 남은 입력은 `SOLAPI_API_KEY`, `SOLAPI_API_SECRET`, `SOLAPI_KAKAO_PF_ID`입니다.

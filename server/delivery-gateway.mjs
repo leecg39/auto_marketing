@@ -401,6 +401,24 @@ async function sendSolapi(payload, action, id, env, fetchImpl, now) {
     return { status: 'failed', channel: 'kakao', reason: 'solapi_request_failed', provider_status: response.status };
   }
 
+  const registrationFailed = [
+    body.registeredFailed,
+    body.groupInfo?.registeredFailed,
+    body.groupInfo?.count?.registeredFailed
+  ].some((value) => Number(value) > 0) || [
+    body.failedMessageList,
+    body.groupInfo?.failedMessageList
+  ].some((failedMessages) => Array.isArray(failedMessages) && failedMessages.length > 0);
+  if (registrationFailed) {
+    return {
+      status: 'failed',
+      channel: 'kakao',
+      reason: 'solapi_registration_failed',
+      providerId,
+      provider_status: response.status
+    };
+  }
+
   return {
     status: built.scheduled ? 'scheduled' : 'sent',
     channel: 'kakao',
@@ -617,6 +635,7 @@ async function processDelivery(payload, options = {}) {
         flow: action.flow,
         channel,
         status: result.status,
+        ...(result.providerId ? { provider_id: result.providerId } : {}),
         ...(result.reason ? { reason: result.reason } : {}),
         ...(result.provider_status ? { provider_status: result.provider_status } : {})
       });

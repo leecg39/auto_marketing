@@ -43,7 +43,16 @@ function jsonResponse(status, body) {
   };
 }
 
-function createDeliveryFetch(redisUrl = READY_ENV.UPSTASH_REDIS_REST_URL) {
+function createDeliveryFetch(
+  redisUrl = READY_ENV.UPSTASH_REDIS_REST_URL,
+  solapiResponse = {
+    groupInfo: {
+      groupId: 'group-1',
+      count: { registeredSuccess: 1, registeredFailed: 0 }
+    },
+    failedMessageList: []
+  }
+) {
   const strings = new Map();
   const sets = new Map();
   const calls = [];
@@ -97,7 +106,7 @@ function createDeliveryFetch(redisUrl = READY_ENV.UPSTASH_REDIS_REST_URL) {
       return jsonResponse(200, { id: url.split('/').at(-2), object: 'email' });
     }
     if (url === 'https://api.solapi.com/messages/v4/send-many/detail') {
-      return jsonResponse(200, { groupInfo: { groupId: 'group-1' } });
+      return jsonResponse(200, solapiResponse);
     }
 
     throw new Error(`unexpected_url:${url}`);
@@ -123,6 +132,20 @@ function cartPayload() {
       channels: ['email', 'kakao'],
       scheduled_at: '2026-07-17T01:00:00.000Z',
       cancel_on_event: 'purchase'
+    }]
+  };
+}
+
+function kakaoPayload() {
+  const payload = cartPayload();
+  return {
+    ...payload,
+    email: '',
+    phone: '01012345678',
+    automation_actions: [{
+      ...payload.automation_actions[0],
+      channels: ['kakao'],
+      scheduled_at: ''
     }]
   };
 }
@@ -370,6 +393,87 @@ test('builds provider-native scheduled email and Kakao payloads', () => {
   assert.equal(kakao.scheduled, true);
   assert.equal(kakao.request.messages[0].to, '01012345678');
   assert.equal(kakao.request.messages[0].kakaoOptions.bms.targeting, 'I');
+});
+
+test('returns the SOLAPI group provider_id after successful registration', async () => {
+  const mock = createDeliveryFetch(undefined, {
+    groupInfo: {
+      groupId: 'group-success',
+      count: { registeredSuccess: 1, registeredFailed: 0 }
+    },
+    failedMessageList: []
+  });
+
+  const result = await processDelivery(kakaoPayload(), {
+    env: READY_ENV,
+    fetchImpl: mock.fetchImpl,
+    now: NOW
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.summary.sent, 1);
+  assert.deepEqual(result.results, [{
+    flow: 'cart_abandonment_reminder',
+    channel: 'kakao',
+    status: 'sent',
+    provider_id: 'group-success'
+  }]);
+});
+
+test('fails a partially registered SOLAPI group even when HTTP and groupId succeed', async () => {
+  const mock = createDeliveryFetch(undefined, {
+    groupInfo: {
+      groupId: 'group-partial-failure',
+      count: { registeredSuccess: 1, registeredFailed: 1 }
+    },
+    failedMessageList: []
+  });
+
+  const result = await processDelivery(kakaoPayload(), {
+    env: READY_ENV,
+    fetchImpl: mock.fetchImpl,
+    now: NOW
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.summary.sent, 0);
+  assert.equal(result.summary.failed, 1);
+  assert.deepEqual(result.results, [{
+    flow: 'cart_abandonment_reminder',
+    channel: 'kakao',
+    status: 'failed',
+    provider_id: 'group-partial-failure',
+    reason: 'solapi_registration_failed',
+    provider_status: 200
+  }]);
+});
+
+test('fails a fully rejected SOLAPI group when failedMessageList is non-empty', async () => {
+  const mock = createDeliveryFetch(undefined, {
+    groupInfo: {
+      groupId: 'group-full-failure',
+      count: { registeredSuccess: 0, registeredFailed: 1 }
+    },
+    failedMessageList: [{ messageId: 'failed-message-1' }]
+  });
+
+  const result = await processDelivery(kakaoPayload(), {
+    env: READY_ENV,
+    fetchImpl: mock.fetchImpl,
+    now: NOW
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.summary.sent, 0);
+  assert.equal(result.summary.failed, 1);
+  assert.deepEqual(result.results, [{
+    flow: 'cart_abandonment_reminder',
+    channel: 'kakao',
+    status: 'failed',
+    provider_id: 'group-full-failure',
+    reason: 'solapi_registration_failed',
+    provider_status: 200
+  }]);
 });
 
 test('test mode does not allow user_id to bypass the channel recipient allowlist', async () => {
