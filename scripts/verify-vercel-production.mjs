@@ -16,14 +16,26 @@ const CHROME_CANDIDATES = [
   '/usr/bin/chromium',
   '/usr/bin/chromium-browser'
 ].filter(Boolean);
-const EXPECTED_EVENTS = ['view_item', 'add_to_cart', 'begin_checkout', 'purchase', 'generate_lead'];
+const EXPECTED_EVENTS = [
+  'view_item',
+  'add_to_cart',
+  'begin_checkout',
+  'purchase',
+  'sign_up',
+  'login',
+  'generate_lead'
+];
 const EXPECTED_CRM_FLOWS = [
+  'welcome_coupon',
+  'customer_activity_refresh',
   'cart_abandonment_candidate',
   'checkout_abandonment_candidate',
   'post_purchase_review_and_recommendation',
   'lead_followup'
 ];
 const EXPECTED_ACTION_FLOWS = [
+  'welcome_coupon',
+  'customer_activity_refresh',
   'cart_abandonment_reminder',
   'cart_retargeting_audience',
   'checkout_abandonment_reminder',

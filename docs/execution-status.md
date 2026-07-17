@@ -415,3 +415,11 @@ npm run stop:local
 - 커밋 `52b6070`을 GitHub `main`에 푸시했고 Vercel production에 반영했습니다.
 - 전체 테스트 122/122, 정적 검사, GTM import 검증 88/88, 전체 로컬 QA 8/8, Vercel production 검증 9/9가 통과했습니다. 운영 API에서 수명주기 이벤트 3종과 액션 생성, 메시지 억제 상태를 확인했습니다.
 - 운영 readiness의 유일한 누락값은 실제 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.
+
+### 2026-07-17 7개 이벤트 운영 검증 보강
+
+- 데모와 headless Chrome 자동 실행 범위를 GA4 필수 7개 이벤트 `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `sign_up`, `login`, `generate_lead`로 확장했습니다.
+- `sign_up`은 수신동의가 있는 테스트 연락처로 `welcome_coupon` 액션을 생성하고, `login`은 연락처 없이 `customer_activity_refresh` 광고 오디언스 액션을 생성합니다.
+- 로컬 브라우저 E2E에서 7개 dataLayer 이벤트, CRM 이벤트 6개, downstream `202` 6건, UTM 보존, 구매 중복 차단, dataLayer 개인정보 미포함을 확인했습니다.
+- 완료 감사는 로컬 env 파일이 없을 때 Vercel production QA의 `/api/marketing/env-status`와 브라우저 자동 실행 결과를 운영 증거로 사용합니다. 따라서 적용된 GTM/GA4/Ads/Meta ID를 누락으로 오판하지 않고 실제 미설정값만 보고합니다.
+- 정적 검사, 전체 테스트 123/123, 전체 로컬 QA 8/8가 통과했습니다.

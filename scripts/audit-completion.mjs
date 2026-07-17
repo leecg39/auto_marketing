@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_FULL_QA_REPORT = path.join(KIT_ROOT, 'dist', 'full-qa-report.json');
 const DEFAULT_HANDOFF_REPORT = path.join(KIT_ROOT, 'dist', 'deployment-handoff.json');
+const DEFAULT_VERCEL_REPORT = path.join(KIT_ROOT, 'dist', 'vercel-production-report.json');
 const DEFAULT_MARKDOWN_OUTPUT = path.join(KIT_ROOT, 'dist', 'completion-audit.md');
 const DEFAULT_JSON_OUTPUT = path.join(KIT_ROOT, 'dist', 'completion-audit.json');
 
@@ -22,6 +23,8 @@ const REQUIRED_EVENTS = [
 ];
 
 const REQUIRED_AUTOMATION_ACTIONS = [
+  'welcome_coupon',
+  'customer_activity_refresh',
   'cart_abandonment_reminder',
   'cart_retargeting_audience',
   'checkout_abandonment_reminder',
@@ -60,6 +63,15 @@ function stepById(fullQa, id) {
 function stepPassed(fullQa, id) {
   const step = stepById(fullQa, id);
   return Boolean(step && step.status === 'passed' && step.ok !== false);
+}
+
+function productionCheckById(vercel, id) {
+  return vercel?.checks?.find((check) => check.id === id) || null;
+}
+
+function productionCheckPassed(vercel, id) {
+  const check = productionCheckById(vercel, id);
+  return Boolean(check && check.status === 'passed' && check.ok !== false);
 }
 
 function statusFromEvidence(ok, missingEvidence, externalBlocker = false) {
@@ -136,7 +148,21 @@ function missingInputs(currentEnv, fullQa, handoff) {
   };
 }
 
-function buildRequirements(fullQa, handoff, currentEnv) {
+function productionEnvEvidence(vercel) {
+  const check = productionCheckById(vercel, 'env_readiness');
+  if (!check || check.status !== 'passed' || !check.summary) {
+    return null;
+  }
+
+  return {
+    root: vercel.base_url || '',
+    loaded_env_files: ['vercel:/api/marketing/env-status'],
+    ready: check.ready === true,
+    summary: check.summary
+  };
+}
+
+function buildRequirements(fullQa, handoff, currentEnv, vercel) {
   const gtmVerify = stepById(fullQa, 'gtm_import_verify');
   const browserDemo = stepById(fullQa, 'browser_demo_e2e');
   const localE2e = stepById(fullQa, 'local_e2e');
@@ -145,8 +171,33 @@ function buildRequirements(fullQa, handoff, currentEnv) {
   const siteEnv = stepById(fullQa, 'site_env');
   const gtmRender = stepById(fullQa, 'gtm_import_render');
   const revenue = stepById(fullQa, 'revenue_reconciliation');
+  const productionDemo = productionCheckById(vercel, 'demo_browser_autorun');
+  const productionEnv = productionCheckById(vercel, 'env_readiness');
+  const productionSiteReady =
+    productionCheckPassed(vercel, 'root_page') &&
+    productionCheckPassed(vercel, 'api_health') &&
+    productionCheckPassed(vercel, 'demo_browser_autorun');
+  const localSiteReady = stepPassed(fullQa, 'site_audit') && stepPassed(fullQa, 'site_runtime');
+  const productionEvents = productionDemo?.events || [];
+  const productionEventEvidence = Boolean(productionDemo);
+  const productionEventsReady = REQUIRED_EVENTS.every((eventName) => productionEvents.includes(eventName));
+  const localEventContractReady =
+    stepPassed(fullQa, 'gtm_import_verify') &&
+    stepPassed(fullQa, 'site_audit') &&
+    allSupportedEvents(siteAudit);
+  const browserSummary = productionCheckPassed(vercel, 'demo_browser_autorun')
+    ? productionDemo
+    : browserDemo?.json?.summary;
+  const browserAutomationEvidence = productionCheckPassed(vercel, 'demo_browser_autorun')
+    ? { json: { summary: productionDemo } }
+    : browserDemo;
   const envReady = currentEnv?.ready === true;
-  const gtmReady = gtmRender?.status === 'passed' && gtmRender?.json?.ok === true;
+  const renderedGtmReady = gtmRender?.status === 'passed' && gtmRender?.json?.ok === true;
+  const productionGtmReady =
+    stepPassed(fullQa, 'gtm_import_verify') &&
+    productionCheckPassed(vercel, 'demo_browser_autorun') &&
+    productionEvents.includes('gtm.js');
+  const gtmReady = renderedGtmReady || productionGtmReady;
   const fullQaExists = Boolean(fullQa);
   const inputSummary = missingInputs(currentEnv, fullQa, handoff);
 
@@ -167,12 +218,13 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       'site_installation',
       '사이트 공통 레이아웃 SDK 설치, 동의 UI, CRM route 연결',
       statusFromEvidence(
-        stepPassed(fullQa, 'site_audit') && stepPassed(fullQa, 'site_runtime'),
-        !fullQaExists || !siteAudit || !siteRuntime
+        localSiteReady || productionSiteReady,
+        (!fullQaExists || !siteAudit || !siteRuntime) && !productionSiteReady
       ),
       [
         `site_audit=${siteAudit?.status || 'missing'}`,
         `site_runtime=${siteRuntime?.status || 'missing'}`,
+        `production_site=${productionSiteReady ? 'passed' : 'missing'}`,
         siteAudit?.json?.installation_status
           ? `sdk=${siteAudit.json.installation_status.sdk_installed}, provider=${siteAudit.json.installation_status.provider_mounted}, crm_route=${siteAudit.json.installation_status.crm_route_installed}`
           : null
@@ -183,11 +235,14 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       'ga4_event_contract',
       'GA4 권장 이벤트 7개 dataLayer 계약 구현',
       statusFromEvidence(
-        stepPassed(fullQa, 'gtm_import_verify') && stepPassed(fullQa, 'site_audit') && allSupportedEvents(siteAudit),
-        !fullQaExists || !siteAudit || !gtmVerify
+        localEventContractReady || (stepPassed(fullQa, 'gtm_import_verify') && productionEventsReady),
+        !fullQaExists || !gtmVerify || (!siteAudit && !productionEventEvidence)
       ),
       [
         `required_events=${REQUIRED_EVENTS.join(', ')}`,
+        productionEventEvidence
+          ? `production_events=${productionEvents.join(', ') || 'none'}`
+          : 'production_events=missing',
         siteAudit?.json?.installation_status?.supported_events
           ? `site_supported=${JSON.stringify(siteAudit.json.installation_status.supported_events)}`
           : null
@@ -198,15 +253,16 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       'purchase_quality',
       'purchase 주문번호 중복 방지와 GA4 개인정보 제거',
       statusFromEvidence(
-        stepPassed(fullQa, 'browser_demo_e2e') &&
-          browserDemo?.json?.summary?.duplicate_purchase === 'duplicate_transaction_id' &&
-          browserDemo?.json?.summary?.pii_in_data_layer === false,
-        !fullQaExists || !browserDemo
+        Boolean(browserSummary) &&
+          browserSummary?.duplicate_purchase === 'duplicate_transaction_id' &&
+          browserSummary?.pii_in_data_layer === false,
+        (!fullQaExists || !browserDemo) && !productionDemo
       ),
       [
         `browser_demo_e2e=${browserDemo?.status || 'missing'}`,
-        `duplicate_purchase=${browserDemo?.json?.summary?.duplicate_purchase || 'missing'}`,
-        `pii_in_data_layer=${browserDemo?.json?.summary?.pii_in_data_layer ?? 'missing'}`
+        `production_demo=${productionDemo?.status || 'missing'}`,
+        `duplicate_purchase=${browserSummary?.duplicate_purchase || 'missing'}`,
+        `pii_in_data_layer=${browserSummary?.pii_in_data_layer ?? 'missing'}`
       ],
       '운영 결제 성공 페이지에서도 실제 주문번호로 새로고침 중복을 재확인합니다.'
     ),
@@ -215,16 +271,17 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       '이메일/카카오/광고 리타겟팅 자동화 플로우와 downstream 전달',
       statusFromEvidence(
         stepPassed(fullQa, 'local_e2e') &&
-          stepPassed(fullQa, 'browser_demo_e2e') &&
+          Boolean(browserAutomationEvidence) &&
           hasExpectedLocalFlows(localE2e) &&
-          hasAllAutomationActions(localE2e, browserDemo),
-        !fullQaExists || !localE2e || !browserDemo
+          hasAllAutomationActions(localE2e, browserAutomationEvidence),
+        !fullQaExists || !localE2e || (!browserDemo && !productionDemo)
       ),
       [
         `local_e2e=${localE2e?.status || 'missing'}`,
         `browser_demo_e2e=${browserDemo?.status || 'missing'}`,
-        browserDemo?.json?.summary?.automation_action_flows
-          ? `actions=${browserDemo.json.summary.automation_action_flows.join(', ')}`
+        `production_demo=${productionDemo?.status || 'missing'}`,
+        browserSummary?.automation_action_flows
+          ? `actions=${browserSummary.automation_action_flows.join(', ')}`
           : null,
         localE2e?.json?.summary?.downstream
           ? `downstream_events=${localE2e.json.summary.downstream.event_names.join(', ')}`
@@ -251,6 +308,7 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       statusFromEvidence(envReady, !fullQaExists && !handoff, !envReady),
       [
         `site_env=${siteEnv?.status || 'missing'}`,
+        `production_env=${productionEnv?.status || 'missing'}`,
         `env_ready=${envReady}`,
         `missing=${inputSummary.missing.join(', ') || 'none'}`,
         `placeholders=${inputSummary.placeholders.join(', ') || 'none'}`,
@@ -264,7 +322,8 @@ function buildRequirements(fullQa, handoff, currentEnv) {
       statusFromEvidence(gtmReady, !fullQaExists && !handoff, !gtmReady),
       [
         `gtm_import_render=${gtmRender?.status || 'missing'}`,
-        `render_ok=${gtmRender?.json?.ok ?? false}`,
+        `render_ok=${renderedGtmReady}`,
+        `production_gtm_runtime=${productionGtmReady}`,
         `output=${gtmRender?.json?.output || 'missing'}`
       ],
       '운영 env 값이 준비되면 render:gtm으로 production import를 생성하고 verify:gtm --input으로 검증합니다.'
@@ -323,11 +382,19 @@ function renderMarkdown(report) {
 async function auditCompletion(options = {}) {
   const fullQaReport = path.resolve(options.fullQaReport || DEFAULT_FULL_QA_REPORT);
   const handoffReport = path.resolve(options.handoffReport || DEFAULT_HANDOFF_REPORT);
+  const vercelReport = path.resolve(options.vercelReport || DEFAULT_VERCEL_REPORT);
   const fullQa = await readJsonIfExists(fullQaReport);
   const handoff = await readJsonIfExists(handoffReport);
+  const vercel = await readJsonIfExists(vercelReport);
   const siteRoot = path.resolve(options.siteRoot || handoff?.site_root || stepById(fullQa, 'site_audit')?.json?.root || process.cwd());
-  const currentEnv = await validateDeploymentEnv(siteRoot);
-  const requirements = buildRequirements(fullQa, handoff, currentEnv);
+  const localEnv = await validateDeploymentEnv(siteRoot, {
+    envFile: options.envFile
+  });
+  const productionEnv = productionEnvEvidence(vercel);
+  const currentEnv = options.envFile || localEnv.loaded_env_files.length > 0
+    ? localEnv
+    : productionEnv || localEnv;
+  const requirements = buildRequirements(fullQa, handoff, currentEnv, vercel);
   const summary = summarizeRequirements(requirements);
   const blocking = missingInputs(currentEnv, fullQa, handoff);
   const blockingInputs = [...blocking.missing, ...blocking.placeholders, ...blocking.invalid];
@@ -347,10 +414,16 @@ async function auditCompletion(options = {}) {
         file: handoffReport,
         exists: await pathExists(handoffReport)
       },
+      vercel_production: {
+        file: vercelReport,
+        exists: await pathExists(vercelReport),
+        ok: vercel?.ok === true
+      },
       current_env: {
         root: currentEnv.root,
         loaded_env_files: currentEnv.loaded_env_files,
-        ready: currentEnv.ready
+        ready: currentEnv.ready,
+        source: currentEnv === productionEnv ? 'vercel_production' : 'site_env'
       }
     },
     blocking_inputs: blockingInputs,
@@ -358,7 +431,7 @@ async function auditCompletion(options = {}) {
     next_step: completionReady
       ? '계획의 자동 검증 가능 항목이 모두 완료되었습니다. 운영 GTM/GA4/광고 도구 화면에서 최종 수신을 유지 모니터링하세요.'
       : blockingInputs.length > 0
-        ? '운영 GTM/GA4/광고/CRM 값을 채운 뒤 apply:env, render:gtm, full:qa --require-env-ready, GTM/GA4/광고 도구 검증을 실행하세요.'
+        ? `운영 입력 ${blockingInputs.join(', ')}을(를) 채운 뒤 Vercel 운영 QA와 완료 감사를 다시 실행하세요.`
         : 'missing_evidence 또는 failed 항목의 산출물을 만든 뒤 감사를 다시 실행하세요.'
   };
 }
@@ -369,6 +442,7 @@ function parseArgs(args) {
     jsonOutput: DEFAULT_JSON_OUTPUT,
     fullQaReport: DEFAULT_FULL_QA_REPORT,
     handoffReport: DEFAULT_HANDOFF_REPORT,
+    vercelReport: DEFAULT_VERCEL_REPORT,
     strict: false
   };
 
@@ -411,6 +485,12 @@ function parseArgs(args) {
     if (key === 'handoff-report') {
       parsed.handoffReport = path.resolve(value);
     }
+    if (key === 'vercel-report') {
+      parsed.vercelReport = path.resolve(value);
+    }
+    if (key === 'env-file') {
+      parsed.envFile = path.resolve(value);
+    }
   }
 
   if (parsed.siteRoot) {
@@ -430,6 +510,8 @@ function usage() {
     '  --json-output FILE      JSON output. Default: dist/completion-audit.json',
     '  --full-qa-report FILE   Full QA report input. Default: dist/full-qa-report.json',
     '  --handoff-report FILE   Deployment handoff JSON input. Default: dist/deployment-handoff.json',
+    '  --vercel-report FILE    Vercel production QA input. Default: dist/vercel-production-report.json',
+    '  --env-file FILE         Read one explicit env file before production env evidence.',
     '  --strict                Exit non-zero unless every requirement is complete.'
   ].join('\n');
 }

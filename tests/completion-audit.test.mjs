@@ -148,6 +148,34 @@ function handoff({ ready = false } = {}) {
   };
 }
 
+function vercelProductionReport({ missing = [] } = {}) {
+  return {
+    ok: true,
+    base_url: 'https://store.example.test',
+    checks: [
+      passedStep('root_page'),
+      passedStep('api_health'),
+      {
+        ...passedStep('env_readiness'),
+        ready: missing.length === 0,
+        summary: {
+          ready: missing.length === 0,
+          missing,
+          placeholders: [],
+          invalid: []
+        }
+      },
+      {
+        ...passedStep('demo_browser_autorun'),
+        events: ['gtm.js', ...REQUIRED_EVENTS],
+        automation_action_flows: REQUIRED_AUTOMATION_ACTIONS,
+        duplicate_purchase: 'duplicate_transaction_id',
+        pii_in_data_layer: false
+      }
+    ]
+  };
+}
+
 const READY_ENV = [
   'NEXT_PUBLIC_GTM_ID=GTM-ABCDE12',
   'NEXT_PUBLIC_CRM_WEBHOOK_URL=/api/crm/events',
@@ -172,12 +200,18 @@ test('parses completion audit arguments', () => {
     '/tmp/completion.md',
     '--json-output',
     '/tmp/completion.json',
+    '--vercel-report',
+    '/tmp/vercel.json',
+    '--env-file',
+    '/tmp/production.env',
     '--strict'
   ]);
 
   assert.equal(parsed.siteRoot, '/tmp/store');
   assert.equal(parsed.output, '/tmp/completion.md');
   assert.equal(parsed.jsonOutput, '/tmp/completion.json');
+  assert.equal(parsed.vercelReport, '/tmp/vercel.json');
+  assert.equal(parsed.envFile, '/tmp/production.env');
   assert.equal(parsed.strict, true);
 });
 
@@ -195,7 +229,8 @@ test('completion audit marks missing operating values as external blockers', asy
     const report = await auditCompletion({
       siteRoot,
       fullQaReport,
-      handoffReport
+      handoffReport,
+      vercelReport: path.join(tmp, 'missing-vercel.json')
     });
 
     assert.equal(report.completion_ready, false);
@@ -234,7 +269,8 @@ test('completion audit uses current site env before stale handoff inputs', async
     const report = await auditCompletion({
       siteRoot,
       fullQaReport,
-      handoffReport
+      handoffReport,
+      vercelReport: path.join(tmp, 'missing-vercel.json')
     });
 
     assert.equal(report.blocking_inputs.includes('NEXT_PUBLIC_CRM_WEBHOOK_URL'), false);
@@ -260,7 +296,8 @@ test('completion audit reports ready when all requirement evidence is complete',
     const report = await auditCompletion({
       siteRoot,
       fullQaReport,
-      handoffReport
+      handoffReport,
+      vercelReport: path.join(tmp, 'missing-vercel.json')
     });
     const markdown = renderMarkdown(report);
 
@@ -268,6 +305,41 @@ test('completion audit reports ready when all requirement evidence is complete',
     assert.equal(report.summary.complete, 8);
     assert.equal(report.summary.blocked_external, 0);
     assert.equal(markdown.includes('완료 판정: `true`'), true);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('completion audit uses Vercel production evidence when local env files are absent', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'ma-completion-vercel-'));
+  const siteRoot = path.join(tmp, 'store');
+  const fullQaReport = path.join(tmp, 'full-qa.json');
+  const handoffReport = path.join(tmp, 'handoff.json');
+  const vercelReport = path.join(tmp, 'vercel.json');
+
+  try {
+    await mkdir(siteRoot, { recursive: true });
+    const fullQa = baseFullQa();
+    fullQa.steps = fullQa.steps.filter((step) => !['site_audit', 'site_runtime'].includes(step.id));
+    await writeFile(fullQaReport, JSON.stringify(fullQa));
+    await writeFile(handoffReport, JSON.stringify(handoff()));
+    await writeFile(vercelReport, JSON.stringify(vercelProductionReport({
+      missing: ['DOWNSTREAM_CRM_WEBHOOK_URL']
+    })));
+
+    const report = await auditCompletion({
+      siteRoot,
+      fullQaReport,
+      handoffReport,
+      vercelReport
+    });
+
+    assert.equal(report.completion_ready, false);
+    assert.equal(report.summary.complete, 7);
+    assert.equal(report.summary.blocked_external, 1);
+    assert.deepEqual(report.blocking_inputs, ['DOWNSTREAM_CRM_WEBHOOK_URL']);
+    assert.equal(report.evidence_files.current_env.source, 'vercel_production');
+    assert.equal(report.requirements.find((item) => item.id === 'production_gtm_import').status, 'complete');
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
@@ -294,6 +366,8 @@ test('completion audit CLI writes markdown and JSON outputs', async () => {
       fullQaReport,
       '--handoff-report',
       handoffReport,
+      '--vercel-report',
+      path.join(tmp, 'missing-vercel.json'),
       '--output',
       output,
       '--json-output',

@@ -337,14 +337,26 @@ test('Vercel production verifier parses arguments and demo URL', () => {
 test('Vercel production verifier validates browser autorun QA DOM', () => {
   const qa = {
     ok: true,
-    events: ['view_item', 'add_to_cart', 'begin_checkout', 'purchase', 'generate_lead'],
+    events: [
+      'view_item',
+      'add_to_cart',
+      'begin_checkout',
+      'purchase',
+      'sign_up',
+      'login',
+      'generate_lead'
+    ],
     crm_flows: [
+      'welcome_coupon',
+      'customer_activity_refresh',
       'cart_abandonment_candidate',
       'checkout_abandonment_candidate',
       'post_purchase_review_and_recommendation',
       'lead_followup'
     ],
     automation_action_flows: [
+      'welcome_coupon',
+      'customer_activity_refresh',
       'cart_abandonment_reminder',
       'cart_retargeting_audience',
       'checkout_abandonment_reminder',
@@ -354,7 +366,7 @@ test('Vercel production verifier validates browser autorun QA DOM', () => {
       'purchase_exclusion',
       'lead_followup'
     ],
-    delivery_statuses: [202, 202, 202, 202],
+    delivery_statuses: [202, 202, 202, 202, 202, 202],
     pii_in_data_layer: false,
     duplicate_purchase: {
       skipped: true,
@@ -364,7 +376,7 @@ test('Vercel production verifier validates browser autorun QA DOM', () => {
   const dom = `<div id="qa-result" data-ok="true">QA: ${JSON.stringify(qa).replace(/"/g, '&quot;')}</div>`;
   const summary = verifyQaResult(dom);
 
-  assert.deepEqual(summary.delivery_statuses, [202, 202, 202, 202]);
+  assert.deepEqual(summary.delivery_statuses, [202, 202, 202, 202, 202, 202]);
   assert.equal(summary.duplicate_purchase, 'duplicate_transaction_id');
   assert.equal(summary.pii_in_data_layer, false);
 });
