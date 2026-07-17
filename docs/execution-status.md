@@ -402,3 +402,13 @@ npm run stop:local
 - Vercel의 기존 Google Ads 전환 ID를 교정하고 `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL`, `NEXT_PUBLIC_META_PIXEL_ID`를 Production/Preview 환경에 추가했습니다. 커밋 `93188e5` 기준 production 재배포가 `Ready` 상태이고 운영 도메인에 연결됐습니다.
 - 재배포 후 readiness API에서 GTM, GA4, Google Ads, Meta 항목은 모두 `ready`입니다. Production 검증도 다시 8/8 통과했고 missing 항목은 `DOWNSTREAM_CRM_WEBHOOK_URL` 하나입니다.
 - 실제 외부 입력이 필요한 최종 차단값은 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.
+
+### 2026-07-17 추가 검증
+
+- Meta 데이터 세트 `oliveyoung-shopee-web`(`1500227578454192`)을 광고 계정 `oliveyoung-shopee`(`1026946413533071`)과 연결했습니다.
+- GTM Preview에서는 Meta `AddToCart`, `InitiateCheckout`, `Purchase` 태그가 발화하지만, Meta가 내려주는 Pixel 설정의 `restrictedEventNames`에 세 이벤트가 포함되어 실제 `facebook.com/tr` 요청은 억제됩니다.
+- Events Manager에서 데이터 세트가 `개인적인 어려움` 민감 카테고리로 잘못 분류된 것을 확인했습니다. 이벤트 차단 검토의 `확인했습니다` 버튼은 Meta 비즈니스 도구 약관 준수 동의이므로 사용자 승인 전 상태로 대기 중입니다.
+- CRM 수명주기 이벤트 `dormant_60_days`, `dormant_90_days`, `vip_qualified`와 휴면 복귀/VIP 혜택 액션을 구현했습니다. 휴면/VIP 이벤트는 `user_id`를 필수로 요구하고, `marketing_consent`는 JSON 불리언 `true`만 동의로 인정합니다.
+- 커밋 `52b6070`을 GitHub `main`에 푸시했고 Vercel production에 반영했습니다.
+- 전체 테스트 120/120, 정적 검사, 전체 로컬 QA 8/8, Vercel production 검증 9/9가 통과했습니다. 운영 API에서 수명주기 이벤트 3종과 액션 생성, 메시지 억제 상태를 확인했습니다.
+- 운영 readiness의 유일한 누락값은 실제 이메일/카카오/CRM 공급자의 `DOWNSTREAM_CRM_WEBHOOK_URL`입니다.
